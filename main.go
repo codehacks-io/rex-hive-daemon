@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
 )
 
 func main() {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
 	fmt.Println("Daemon: starting")
 
 	// Prepare command
@@ -14,16 +18,23 @@ func main() {
 
 	// Execute command
 	cmd := exec.Command(app, arg0)
-	stdout, err := cmd.Output()
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
 
 	// Check for errors
 	if err != nil {
-		fmt.Println("Daemon: The command failed executing")
+		fmt.Println("Daemon: failed executing")
 		fmt.Println(err.Error())
 		return
 	}
 
 	// Check for success
-	fmt.Println("Daemon: The command succeeded executing")
-	fmt.Println(string(stdout))
+	fmt.Println("Daemon: succeeded executing")
+
+	fmt.Println("Daemon: output below------------")
+	fmt.Println(stdout.String())
+
+	fmt.Println("Daemon: errors below------------")
+	fmt.Println(stderr.String())
 }
