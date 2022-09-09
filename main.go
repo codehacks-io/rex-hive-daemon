@@ -7,13 +7,16 @@ import (
 )
 
 func main() {
+	run("./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1", "1", "do-fail")
+}
+
+func run(command string, args ...string) {
 	fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, "Daemon: starting"))
 
 	// Prepare command
-	app := "./demo-exes/03-dynamic-sleep-cpp.exe"
 
 	// Execute command
-	cmd := exec.Command(app, "1", "-1", "1", "do-fail")
+	cmd := exec.Command(command, args...)
 
 	stdout, err := cmd.StdoutPipe()
 	stderr, err := cmd.StderrPipe()
