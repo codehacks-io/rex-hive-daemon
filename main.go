@@ -16,12 +16,12 @@ func main() {
 	commands := [][]string{
 		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1"},
 		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "-1", "-1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "-1", "-1", "f"},
 	}
 
 	for i, command := range commands {
 		wg.Add(1)
-		printLnColor(colors, i, fmt.Sprintf("running command '%s' with args %s", command[0], command[1:]))
+		printLnColor(colors, i, dim(fmt.Sprintf("running command '%s' with args %s", command[0], command[1:])))
 		go runCommand(i, &wg, colors, command[0], command[1:]...)
 	}
 
@@ -73,10 +73,14 @@ func printLnColor(colors []int, i int, msg ...any) {
 	fmt.Println(msg...)
 }
 
+func dim(text string) string {
+	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", 37, text)
+}
+
 func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args ...string) {
 	defer group.Done()
 
-	printLnColor(colors, i, "starting")
+	printLnColor(colors, i, dim("starting"))
 
 	// Prepare command
 
@@ -109,8 +113,8 @@ func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args
 	}()
 
 	if err := cmd.Wait(); err != nil {
-		printLnColor(colors, i, "terminated with error", err.Error())
+		printLnColor(colors, i, dim("terminated with error"), err.Error())
 	} else {
-		printLnColor(colors, i, "terminated")
+		printLnColor(colors, i, dim("terminated"))
 	}
 }
