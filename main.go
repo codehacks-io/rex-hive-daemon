@@ -73,8 +73,20 @@ func printLnColor(colors []int, i int, msg ...any) {
 	fmt.Println(msg...)
 }
 
+func getColored(color int, text string) string {
+	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", color, text)
+}
+
 func dim(text string) string {
-	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", 37, text)
+	return getColored(37, text)
+}
+
+func errColor(text string) string {
+	return getColored(41, text)
+}
+
+func outColor(text string) string {
+	return getColored(42, text)
 }
 
 func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args ...string) {
@@ -100,7 +112,7 @@ func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			m := scanner.Text()
-			printLnColor(colors, i, "STDOUT", m)
+			printLnColor(colors, i, outColor("STDOUT"), m)
 		}
 	}()
 
@@ -108,7 +120,7 @@ func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args
 		scannerErr := bufio.NewScanner(stderr)
 		for scannerErr.Scan() {
 			m := scannerErr.Text()
-			printLnColor(colors, i, "STDERR", m)
+			printLnColor(colors, i, errColor("STDERR"), m)
 		}
 	}()
 
