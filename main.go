@@ -10,11 +10,19 @@ import (
 func main() {
 	var wg sync.WaitGroup
 
-	for i := 1; i <= 5; i++ {
-		wg.Add(1)
-		go run(&wg, "./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1")
+	commands := [][]string{
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "2", "1"},
 	}
 
+	for i, command := range commands {
+		wg.Add(1)
+		fmt.Println(i, command[0], "with args", command[1:])
+		go run(&wg, command[0], command[1:]...)
+	}
+
+	// TODO: Use channels to communicate if a goroutine exists, and if so, restart it.
+	// TODO: Add a restart policy similar to how docker or k8s or terraform restart pods
 	wg.Wait()
 }
 
