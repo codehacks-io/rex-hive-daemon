@@ -3,22 +3,26 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/fatih/color"
+	"math/rand"
 	"os/exec"
 	"sync"
+	"time"
 )
 
 func main() {
 	var wg sync.WaitGroup
+	colors := getRandomColors()
 
 	commands := [][]string{
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "-2", "1", "x"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1", "1", "1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1", "1", "1"},
 	}
 
 	for i, command := range commands {
 		wg.Add(1)
 		fmt.Println(fmt.Sprintf("[%d] running command '%s' with args %s", i, command[0], command[1:]))
-		go run(i, &wg, command[0], command[1:]...)
+		go run(i, &wg, colors, command[0], command[1:]...)
 	}
 
 	// TODO: Use channels to communicate if a goroutine exists, and if so, restart it.
@@ -26,10 +30,45 @@ func main() {
 	wg.Wait()
 }
 
-func run(i int, group *sync.WaitGroup, command string, args ...string) {
+func getRandomColors() []*color.Color {
+	colors := []*color.Color{
+		color.New(color.FgBlack),
+		color.New(color.FgRed),
+		color.New(color.FgGreen),
+		color.New(color.FgYellow),
+		color.New(color.FgBlue),
+		color.New(color.FgMagenta),
+		color.New(color.FgCyan),
+		color.New(color.FgWhite),
+		color.New(color.FgHiBlack),
+		color.New(color.FgHiRed),
+		color.New(color.FgHiGreen),
+		color.New(color.FgHiYellow),
+		color.New(color.FgHiBlue),
+		color.New(color.FgHiMagenta),
+		color.New(color.FgHiCyan),
+		color.New(color.FgHiWhite),
+	}
+
+	// Shuffle colors array
+	rand.Seed(time.Now().UnixNano())
+	for i := range colors {
+		j := rand.Intn(i + 1)
+		colors[i], colors[j] = colors[j], colors[i]
+	}
+	return colors
+}
+
+func printLnColor(colors []*color.Color, i int, msg ...any) {
+	colorIndex := i % len(colors)
+	_, _ = colors[colorIndex].Print(fmt.Sprintf("[%d] ", i))
+	fmt.Println(msg...)
+}
+
+func run(i int, group *sync.WaitGroup, colors []*color.Color, command string, args ...string) {
 	defer group.Done()
 
-	fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, fmt.Sprintf("[%d] starting", i)))
+	printLnColor(colors, i, "starting")
 
 	// Prepare command
 
@@ -40,7 +79,7 @@ func run(i int, group *sync.WaitGroup, command string, args ...string) {
 	stderr, err := cmd.StderrPipe()
 
 	if err = cmd.Start(); err != nil {
-		fmt.Println(err)
+		printLnColor(colors, i, err.Error())
 	}
 
 	// print the output of the subprocess
@@ -49,8 +88,7 @@ func run(i int, group *sync.WaitGroup, command string, args ...string) {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			m := scanner.Text()
-			colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", 32, fmt.Sprintf("[%d] STDOUT", i))
-			fmt.Println(colored, m)
+			printLnColor(colors, i, "STDOUT", m)
 		}
 	}()
 
@@ -58,14 +96,13 @@ func run(i int, group *sync.WaitGroup, command string, args ...string) {
 		scannerErr := bufio.NewScanner(stderr)
 		for scannerErr.Scan() {
 			m := scannerErr.Text()
-			colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", 31, fmt.Sprintf("[%d] STDERR", i))
-			fmt.Println(colored, m)
+			printLnColor(colors, i, "STDERR", m)
 		}
 	}()
 
 	if err := cmd.Wait(); err != nil {
-		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 31, fmt.Sprintf("[%d] terminated with error: %s", i, err.Error())))
+		printLnColor(colors, i, "terminated with error", err.Error())
 	} else {
-		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, fmt.Sprintf("[%d] terminated", i)))
+		printLnColor(colors, i, "terminated")
 	}
 }
