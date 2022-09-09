@@ -1,40 +1,51 @@
 package main
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
 	"os/exec"
 )
 
 func main() {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	fmt.Println("Daemon: starting")
+	fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, "Daemon: starting"))
 
 	// Prepare command
-	app := "./demo-exes/02-sleep-from-cpp.exe"
-	arg0 := "-e"
+	app := "./demo-exes/03-dynamic-sleep-cpp.exe"
 
 	// Execute command
-	cmd := exec.Command(app, arg0)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
+	cmd := exec.Command(app, "1", "-1", "1", "do-fail")
 
-	// Check for errors
-	if err != nil {
-		fmt.Println("Daemon: failed executing")
-		fmt.Println(err.Error())
-		return
+	stdout, err := cmd.StdoutPipe()
+	stderr, err := cmd.StderrPipe()
+
+	if err = cmd.Start(); err != nil {
+		fmt.Println(err)
 	}
 
-	// Check for success
-	fmt.Println("Daemon: succeeded executing")
+	// print the output of the subprocess
 
-	fmt.Println("Daemon: output below------------")
-	fmt.Println(stdout.String())
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			m := scanner.Text()
+			colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", 32, "STDOUT")
+			fmt.Println(colored, m)
+		}
+	}()
 
-	fmt.Println("Daemon: errors below------------")
-	fmt.Println(stderr.String())
+	go func() {
+		scannerErr := bufio.NewScanner(stderr)
+		for scannerErr.Scan() {
+			m := scannerErr.Text()
+			colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", 31, "STDERR")
+			fmt.Println(colored, m)
+		}
+	}()
+
+	if err := cmd.Wait(); err != nil {
+		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, "Daemon: command failed"))
+		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 31, err.Error()))
+	} else {
+		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, "Daemon: complete"))
+	}
 }
