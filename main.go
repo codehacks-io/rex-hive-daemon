@@ -30,6 +30,14 @@ func main() {
 	wg.Wait()
 }
 
+func printAllColors() {
+	colors := getRandomColors()
+
+	for i, c := range colors {
+		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", c, fmt.Sprintf("[%d]:%d", i, c)))
+	}
+}
+
 func getRandomColors() []int {
 	colors := []int{
 		31,
@@ -38,7 +46,9 @@ func getRandomColors() []int {
 		34,
 		35,
 		36,
-		91,
+		//37, Barely visible
+		//90, Barely visible
+		//91, Very similar to red (31)
 		92,
 		93,
 		94,
