@@ -4,13 +4,23 @@ import (
 	"bufio"
 	"fmt"
 	"os/exec"
+	"sync"
 )
 
 func main() {
-	run("./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1", "1", "do-fail")
+	var wg sync.WaitGroup
+
+	for i := 1; i <= 5; i++ {
+		wg.Add(1)
+		go run(&wg, "./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1")
+	}
+
+	wg.Wait()
 }
 
-func run(command string, args ...string) {
+func run(group *sync.WaitGroup, command string, args ...string) {
+	defer group.Done()
+
 	fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, "Daemon: starting"))
 
 	// Prepare command
