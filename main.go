@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/fatih/color"
 	"math/rand"
 	"os/exec"
 	"sync"
@@ -15,14 +14,15 @@ func main() {
 	colors := getRandomColors()
 
 	commands := [][]string{
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1", "1", "1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1", "1", "1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "-1", "-1"},
 	}
 
 	for i, command := range commands {
 		wg.Add(1)
-		fmt.Println(fmt.Sprintf("[%d] running command '%s' with args %s", i, command[0], command[1:]))
-		go run(i, &wg, colors, command[0], command[1:]...)
+		printLnColor(colors, i, fmt.Sprintf("running command '%s' with args %s", command[0], command[1:]))
+		go runCommand(i, &wg, colors, command[0], command[1:]...)
 	}
 
 	// TODO: Use channels to communicate if a goroutine exists, and if so, restart it.
@@ -30,24 +30,21 @@ func main() {
 	wg.Wait()
 }
 
-func getRandomColors() []*color.Color {
-	colors := []*color.Color{
-		color.New(color.FgBlack),
-		color.New(color.FgRed),
-		color.New(color.FgGreen),
-		color.New(color.FgYellow),
-		color.New(color.FgBlue),
-		color.New(color.FgMagenta),
-		color.New(color.FgCyan),
-		color.New(color.FgWhite),
-		color.New(color.FgHiBlack),
-		color.New(color.FgHiRed),
-		color.New(color.FgHiGreen),
-		color.New(color.FgHiYellow),
-		color.New(color.FgHiBlue),
-		color.New(color.FgHiMagenta),
-		color.New(color.FgHiCyan),
-		color.New(color.FgHiWhite),
+func getRandomColors() []int {
+	colors := []int{
+		31,
+		32,
+		33,
+		34,
+		35,
+		36,
+		91,
+		92,
+		93,
+		94,
+		95,
+		96,
+		97,
 	}
 
 	// Shuffle colors array
@@ -59,13 +56,14 @@ func getRandomColors() []*color.Color {
 	return colors
 }
 
-func printLnColor(colors []*color.Color, i int, msg ...any) {
+func printLnColor(colors []int, i int, msg ...any) {
 	colorIndex := i % len(colors)
-	_, _ = colors[colorIndex].Print(fmt.Sprintf("[%d] ", i))
+	colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", colors[colorIndex], fmt.Sprintf("[%d]", i))
+	msg = append([]any{colored}, msg...)
 	fmt.Println(msg...)
 }
 
-func run(i int, group *sync.WaitGroup, colors []*color.Color, command string, args ...string) {
+func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args ...string) {
 	defer group.Done()
 
 	printLnColor(colors, i, "starting")
