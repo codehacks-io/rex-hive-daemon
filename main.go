@@ -11,14 +11,14 @@ func main() {
 	var wg sync.WaitGroup
 
 	commands := [][]string{
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "2", "1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "-2", "1", "x"},
 	}
 
 	for i, command := range commands {
 		wg.Add(1)
-		fmt.Println(i, command[0], "with args", command[1:])
-		go run(&wg, command[0], command[1:]...)
+		fmt.Println(fmt.Sprintf("[%d] running command '%s' with args %s", i, command[0], command[1:]))
+		go run(i, &wg, command[0], command[1:]...)
 	}
 
 	// TODO: Use channels to communicate if a goroutine exists, and if so, restart it.
@@ -26,10 +26,10 @@ func main() {
 	wg.Wait()
 }
 
-func run(group *sync.WaitGroup, command string, args ...string) {
+func run(i int, group *sync.WaitGroup, command string, args ...string) {
 	defer group.Done()
 
-	fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, "Daemon: starting"))
+	fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, fmt.Sprintf("[%d] starting", i)))
 
 	// Prepare command
 
@@ -49,7 +49,7 @@ func run(group *sync.WaitGroup, command string, args ...string) {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			m := scanner.Text()
-			colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", 32, "STDOUT")
+			colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", 32, fmt.Sprintf("[%d] STDOUT", i))
 			fmt.Println(colored, m)
 		}
 	}()
@@ -58,15 +58,14 @@ func run(group *sync.WaitGroup, command string, args ...string) {
 		scannerErr := bufio.NewScanner(stderr)
 		for scannerErr.Scan() {
 			m := scannerErr.Text()
-			colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", 31, "STDERR")
+			colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", 31, fmt.Sprintf("[%d] STDERR", i))
 			fmt.Println(colored, m)
 		}
 	}()
 
 	if err := cmd.Wait(); err != nil {
-		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, "Daemon: command failed"))
-		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 31, err.Error()))
+		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 31, fmt.Sprintf("[%d] terminated with error: %s", i, err.Error())))
 	} else {
-		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, "Daemon: complete"))
+		fmt.Println(fmt.Sprintf("\x1b[%dm%s\x1b[0m", 34, fmt.Sprintf("[%d] terminated", i)))
 	}
 }
