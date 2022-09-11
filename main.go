@@ -18,20 +18,27 @@ const (
 	Never
 )
 
+type commandQuery struct {
+	command       string
+	args          []string
+	restartPolicy RestartPolicy
+}
+
 func main() {
 	var wg sync.WaitGroup
 	colors := p.GetRandomColors()
 
-	commands := [][]string{
-		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "3", "9", "3"},
-		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1", "1", "-1", "1"},
-		//{"./demo-exes/03-dynamic-sleep-cpp.exxe", "f", "f"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1"},
+	qs := []commandQuery{
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"1", "-1"}, Always},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"2"}, OnFailure},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"f"}, OnFailure},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"15"}, Never},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"f"}, Never},
 	}
 
-	for i, command := range commands {
+	for i, q := range qs {
 		wg.Add(1)
-		go runCommandAndKeepAlive(i, &wg, colors, OnFailure, command[0], command[1:]...)
+		go runCommandAndKeepAlive(i, &wg, colors, q.restartPolicy, q.command, q.args...)
 	}
 
 	// TODO: After x minutes running successfully, reset falloff
