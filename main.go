@@ -10,10 +10,13 @@ import (
 )
 import p "rex-daemon/rexprint"
 
-/*
-Restart policies
-k8s: Always, OnFailure, Never
-*/
+type RestartPolicy int
+
+const (
+	Always RestartPolicy = iota
+	OnFailure
+	Never
+)
 
 func main() {
 	var wg sync.WaitGroup
@@ -22,17 +25,16 @@ func main() {
 	commands := [][]string{
 		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "3", "9", "3"},
 		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1", "1", "-1", "1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exxe", "f", "f"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "5", "5", "5", "5"},
+		//{"./demo-exes/03-dynamic-sleep-cpp.exxe", "f", "f"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1"},
 	}
 
 	for i, command := range commands {
 		wg.Add(1)
-		go runCommandAndKeepAlive(i, &wg, colors, command[0], command[1:]...)
+		go runCommandAndKeepAlive(i, &wg, colors, OnFailure, command[0], command[1:]...)
 	}
 
-	// TODO: Use channels to communicate if a goroutine exists, and if so, restart it.
-	// TODO: Add a restart policy similar to how docker or k8s or terraform restart pods
+	// TODO: After x minutes running successfully, reset falloff
 	wg.Wait()
 }
 
@@ -40,9 +42,9 @@ const initialBackoffDelaySeconds = 5
 const noPID = "noPID"
 
 func expBackoffSeconds(attempt int) time.Duration {
-	// Cap to 5 minutes (2^7 * 5 = 640)
-	if attempt >= 7 {
-		return time.Second * 600
+	// Cap to 5 minutes
+	if attempt >= 6 {
+		return time.Second * 300
 	}
 
 	if attempt < 0 {
@@ -52,22 +54,54 @@ func expBackoffSeconds(attempt int) time.Duration {
 	return time.Second * time.Duration(math.Pow(2, float64(attempt))*initialBackoffDelaySeconds)
 }
 
-func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, command string, args ...string) {
+func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
 	// Sync with wait group
 	defer group.Done()
-	attempt := 0
+
+	// Validate retry policy
+	if restartPolicy != Always && restartPolicy != OnFailure && restartPolicy != Never {
+		panic(fmt.Sprintf("Invalid retry policy %d", restartPolicy))
+		return
+	}
+
+	attempt := -1
 	for {
-		runCommand(i, attempt, colors, command, args...)
 		attempt++
-		backoff := expBackoffSeconds(attempt)
+
+		// If the command never stops, the following line will block forever
+		exitCode := runCommand(i, attempt, colors, command, args...)
+
+		// If this line is reached, the command exited, either successfully of with an error
 		id := fmt.Sprintf("%d:%s:%d", i, noPID, attempt)
-		cmdSummary := fmt.Sprintf("'%s' with args %s", command, args)
-		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("execution of %s terminated, will sleep for %s then will try again", cmdSummary, backoff)))
-		time.Sleep(backoff)
+
+		switch restartPolicy {
+		case Never:
+			{
+				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), restart: Never", exitCode)))
+				return
+			}
+		case Always:
+			{
+				backoff := expBackoffSeconds(attempt)
+				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), restart: Always, will sleep for %s and will re-run", exitCode, backoff)))
+				time.Sleep(backoff)
+			}
+		case OnFailure:
+			{
+				if exitCode == 0 {
+					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), restart: OnFailure, will not re-run", exitCode)))
+					return
+				} else {
+					backoff := expBackoffSeconds(attempt)
+					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), restart: OnFailure, will sleep for %s and will re-run", exitCode, backoff)))
+					time.Sleep(backoff)
+				}
+			}
+		}
 	}
 }
 
-func runCommand(i int, attempt int, colors []int, command string, args ...string) {
+func runCommand(i int, attempt int, colors []int, command string, args ...string) int {
 
 	// Execute command
 	cmd := exec.Command(command, args...)
@@ -81,8 +115,8 @@ func runCommand(i int, attempt int, colors []int, command string, args ...string
 	// Start command
 	if err = cmd.Start(); err != nil {
 		noPidId := fmt.Sprintf("%d:%s:%d", i, noPID, attempt)
-		p.PrintLnColor(noPidId, colors, i, p.ErrColor(fmt.Sprintf("error starting %s: %s", cmdSummary, err.Error())))
-		return
+		p.PrintLnColor(noPidId, colors, i, p.ErrColor(fmt.Sprintf("cannot start %s: %s", cmdSummary, err.Error())))
+		return -1
 	}
 
 	// ID format: index:PID:attempt where attempt increases by one each time the command is restarted
@@ -111,8 +145,10 @@ func runCommand(i int, attempt int, colors []int, command string, args ...string
 
 	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
-		p.PrintLnColor(id, colors, i, p.Dim("terminated with error"), err.Error())
+		p.PrintLnColor(id, colors, i, p.ErrColor(fmt.Sprintf("%s exited with error", cmdSummary)), err.Error())
+		return cmd.ProcessState.ExitCode()
 	} else {
-		p.PrintLnColor(id, colors, i, p.Dim("terminated"))
+		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("%s exited with success code", cmdSummary)))
+		return 0
 	}
 }
