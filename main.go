@@ -39,7 +39,6 @@ func main() {
 }
 
 const initialBackoffDelaySeconds = 5
-const noPID = "noPID"
 
 func expBackoffSeconds(attempt int) time.Duration {
 	// Cap to 5 minutes
@@ -69,11 +68,9 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 		attempt++
 
 		// If the command never stops, the following line will block forever
-		exitCode := runCommand(i, attempt, colors, command, args...)
+		id, exitCode := runCommand(i, attempt, colors, command, args...)
 
 		// If this line is reached, the command exited, either successfully of with an error
-		id := fmt.Sprintf("%d:%s:%d", i, noPID, attempt)
-
 		switch restartPolicy {
 		case Never:
 			{
@@ -101,7 +98,7 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 	}
 }
 
-func runCommand(i int, attempt int, colors []int, command string, args ...string) int {
+func runCommand(i int, attempt int, colors []int, command string, args ...string) (name string, pid int) {
 
 	// Execute command
 	cmd := exec.Command(command, args...)
@@ -114,9 +111,9 @@ func runCommand(i int, attempt int, colors []int, command string, args ...string
 
 	// Start command
 	if err = cmd.Start(); err != nil {
-		noPidId := fmt.Sprintf("%d:%s:%d", i, noPID, attempt)
+		noPidId := fmt.Sprintf("%d:noPID:%d", i, attempt)
 		p.PrintLnColor(noPidId, colors, i, p.ErrColor(fmt.Sprintf("cannot start %s: %s", cmdSummary, err.Error())))
-		return -1
+		return noPidId, -1
 	}
 
 	// ID format: index:PID:attempt where attempt increases by one each time the command is restarted
@@ -146,9 +143,9 @@ func runCommand(i int, attempt int, colors []int, command string, args ...string
 	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
 		p.PrintLnColor(id, colors, i, p.ErrColor(fmt.Sprintf("%s exited with error", cmdSummary)), err.Error())
-		return cmd.ProcessState.ExitCode()
+		return id, cmd.ProcessState.ExitCode()
 	} else {
 		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("%s exited with success code", cmdSummary)))
-		return 0
+		return id, 0
 	}
 }
