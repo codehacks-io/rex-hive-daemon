@@ -9,14 +9,19 @@ import (
 	"time"
 )
 
+/*
+Restart policies
+k8s: Always, OnFailure, Never
+*/
+
 func main() {
 	var wg sync.WaitGroup
 	colors := getRandomColors()
 
 	commands := [][]string{
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "-1", "-1", "f"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "2", "2", "2", "1", "1"},
+		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1", "1", "-1", "1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "f"},
 	}
 
 	for i, command := range commands {
@@ -65,9 +70,9 @@ func getRandomColors() []int {
 	return colors
 }
 
-func printLnColor(colors []int, i int, msg ...any) {
+func printLnColor(id string, colors []int, i int, msg ...any) {
 	colorIndex := i % len(colors)
-	colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", colors[colorIndex], fmt.Sprintf("[%02d]", i))
+	colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", colors[colorIndex], fmt.Sprintf("[%s]", id))
 	msg = append([]any{colored}, msg...)
 	fmt.Println(msg...)
 }
@@ -101,19 +106,21 @@ func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args
 
 	// Start command
 	if err = cmd.Start(); err != nil {
-		printLnColor(colors, i, err.Error())
+		printLnColor(fmt.Sprintf("%d", i), colors, i, err.Error())
 	}
 
-	// Print process PID
+	// ID format: index:PID:attempt where attempt increases by one each time the command is restarted
+	id := fmt.Sprintf("%d:%d:0", i, cmd.Process.Pid)
+
 	// TODO: Beware of printing all args, since the user might pass sensitive data as env vars for the game.
-	printLnColor(colors, i, dim(fmt.Sprintf("running '%s' with args %s PID %d", command, args, cmd.Process.Pid)))
+	printLnColor(id, colors, i, dim(fmt.Sprintf("running '%s' with args %s PID %d", command, args, cmd.Process.Pid)))
 
 	// Print realtime stdout from command
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			m := scanner.Text()
-			printLnColor(colors, i, outColor("STDOUT"), m)
+			printLnColor(id, colors, i, outColor("STDOUT"), m)
 		}
 	}()
 
@@ -122,14 +129,14 @@ func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args
 		scannerErr := bufio.NewScanner(stderr)
 		for scannerErr.Scan() {
 			m := scannerErr.Text()
-			printLnColor(colors, i, errColor("STDERR"), m)
+			printLnColor(id, colors, i, errColor("STDERR"), m)
 		}
 	}()
 
 	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
-		printLnColor(colors, i, dim("terminated with error"), err.Error())
+		printLnColor(id, colors, i, dim("terminated with error"), err.Error())
 	} else {
-		printLnColor(colors, i, dim("terminated"))
+		printLnColor(id, colors, i, dim("terminated"))
 	}
 }
