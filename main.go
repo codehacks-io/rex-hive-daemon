@@ -20,8 +20,7 @@ func main() {
 	}
 
 	for i, command := range commands {
-		// TODO: Beware of printing all args, since the user might pass sensitive data as env vars for the game.
-		printLnColor(colors, i, dim(fmt.Sprintf("running command '%s' with args %s", command[0], command[1:])))
+		wg.Add(1)
 		go runCommand(i, &wg, colors, command[0], command[1:]...)
 	}
 
@@ -91,7 +90,6 @@ func outColor(text string) string {
 
 func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args ...string) {
 	// Sync with wait group
-	group.Add(1)
 	defer group.Done()
 
 	// Execute command
@@ -107,7 +105,8 @@ func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args
 	}
 
 	// Print process PID
-	printLnColor(colors, i, dim(fmt.Sprintf("started with PID %d", cmd.Process.Pid)))
+	// TODO: Beware of printing all args, since the user might pass sensitive data as env vars for the game.
+	printLnColor(colors, i, dim(fmt.Sprintf("running '%s' with args %s PID %d", command, args, cmd.Process.Pid)))
 
 	// Print realtime stdout from command
 	go func() {
