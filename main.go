@@ -22,7 +22,8 @@ func main() {
 	commands := [][]string{
 		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "3", "9", "3"},
 		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1", "1", "-1", "1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "f", "f"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exxe", "f", "f"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "5", "5", "5", "5"},
 	}
 
 	for i, command := range commands {
@@ -36,6 +37,7 @@ func main() {
 }
 
 const initialBackoffDelaySeconds = 5
+const noPID = "noPID"
 
 func expBackoffSeconds(attempt int) time.Duration {
 	// Cap to 5 minutes (2^7 * 5 = 640)
@@ -58,8 +60,9 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, command 
 		runCommand(i, attempt, colors, command, args...)
 		attempt++
 		backoff := expBackoffSeconds(attempt)
-		id := fmt.Sprintf("%d:noPID:%d", i, attempt)
-		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("process terminated, will sleep for %s then will try again", backoff)))
+		id := fmt.Sprintf("%d:%s:%d", i, noPID, attempt)
+		cmdSummary := fmt.Sprintf("'%s' with args %s", command, args)
+		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("execution of %s terminated, will sleep for %s then will try again", cmdSummary, backoff)))
 		time.Sleep(backoff)
 	}
 }
@@ -73,16 +76,20 @@ func runCommand(i int, attempt int, colors []int, command string, args ...string
 	stdout, err := cmd.StdoutPipe()
 	stderr, err := cmd.StderrPipe()
 
+	cmdSummary := fmt.Sprintf("'%s' with args %s", command, args)
+
 	// Start command
 	if err = cmd.Start(); err != nil {
-		p.PrintLnColor(fmt.Sprintf("%d", i), colors, i, err.Error())
+		noPidId := fmt.Sprintf("%d:%s:%d", i, noPID, attempt)
+		p.PrintLnColor(noPidId, colors, i, p.ErrColor(fmt.Sprintf("error starting %s: %s", cmdSummary, err.Error())))
+		return
 	}
 
 	// ID format: index:PID:attempt where attempt increases by one each time the command is restarted
 	id := fmt.Sprintf("%d:%d:%d", i, cmd.Process.Pid, attempt)
 
 	// TODO: Beware of printing all args, since the user might pass sensitive data as env vars for the game.
-	p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("running '%s' with args %s PID %d", command, args, cmd.Process.Pid)))
+	p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("running %s PID %d", cmdSummary, cmd.Process.Pid)))
 
 	// Print realtime stdout from command
 	go func() {
