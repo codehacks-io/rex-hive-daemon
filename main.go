@@ -90,25 +90,26 @@ func outColor(text string) string {
 }
 
 func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args ...string) {
+	// Sync with wait group
 	group.Add(1)
 	defer group.Done()
-
-	printLnColor(colors, i, dim("starting"))
-
-	// Prepare command
 
 	// Execute command
 	cmd := exec.Command(command, args...)
 
+	// Get command out pipes
 	stdout, err := cmd.StdoutPipe()
 	stderr, err := cmd.StderrPipe()
 
+	// Start command
 	if err = cmd.Start(); err != nil {
 		printLnColor(colors, i, err.Error())
 	}
 
-	// print the output of the subprocess
+	// Print process PID
+	printLnColor(colors, i, dim(fmt.Sprintf("started with PID %d", cmd.Process.Pid)))
 
+	// Print realtime stdout from command
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
@@ -117,6 +118,7 @@ func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args
 		}
 	}()
 
+	// Print realtime stderr from command
 	go func() {
 		scannerErr := bufio.NewScanner(stderr)
 		for scannerErr.Scan() {
@@ -125,6 +127,7 @@ func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args
 		}
 	}()
 
+	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
 		printLnColor(colors, i, dim("terminated with error"), err.Error())
 	} else {
