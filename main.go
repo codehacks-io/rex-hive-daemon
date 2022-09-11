@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os/exec"
 	"sync"
+	"time"
 )
 import p "rex-daemon/rexprint"
 
@@ -18,9 +20,9 @@ func main() {
 	colors := p.GetRandomColors()
 
 	commands := [][]string{
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "10", "10", "10"},
+		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "3", "9", "3"},
 		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1", "1", "-1", "1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "2", "f"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "f", "f"},
 	}
 
 	for i, command := range commands {
@@ -33,6 +35,21 @@ func main() {
 	wg.Wait()
 }
 
+const initialBackoffDelaySeconds = 5
+
+func expBackoffSeconds(attempt int) time.Duration {
+	// Cap to 5 minutes (2^7 * 5 = 640)
+	if attempt >= 7 {
+		return time.Second * 600
+	}
+
+	if attempt < 0 {
+		return 0
+	}
+
+	return time.Second * time.Duration(math.Pow(2, float64(attempt))*initialBackoffDelaySeconds)
+}
+
 func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, command string, args ...string) {
 	// Sync with wait group
 	defer group.Done()
@@ -40,6 +57,10 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, command 
 	for {
 		runCommand(i, attempt, colors, command, args...)
 		attempt++
+		backoff := expBackoffSeconds(attempt)
+		id := fmt.Sprintf("%d:noPID:%d", i, attempt)
+		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("process terminated, will sleep for %s then will try again", backoff)))
+		time.Sleep(backoff)
 	}
 }
 
