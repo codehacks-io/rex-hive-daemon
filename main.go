@@ -18,14 +18,14 @@ func main() {
 	colors := p.GetRandomColors()
 
 	commands := [][]string{
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "2", "2", "2", "1", "1"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "10", "10", "10"},
 		//{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "-1", "1", "-1", "1"},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", "1", "f"},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", "2", "f"},
 	}
 
 	for i, command := range commands {
 		wg.Add(1)
-		go runCommand(i, &wg, colors, command[0], command[1:]...)
+		go runCommandAndKeepAlive(i, &wg, colors, command[0], command[1:]...)
 	}
 
 	// TODO: Use channels to communicate if a goroutine exists, and if so, restart it.
@@ -33,9 +33,17 @@ func main() {
 	wg.Wait()
 }
 
-func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args ...string) {
+func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, command string, args ...string) {
 	// Sync with wait group
 	defer group.Done()
+	attempt := 0
+	for {
+		runCommand(i, attempt, colors, command, args...)
+		attempt++
+	}
+}
+
+func runCommand(i int, attempt int, colors []int, command string, args ...string) {
 
 	// Execute command
 	cmd := exec.Command(command, args...)
@@ -50,7 +58,7 @@ func runCommand(i int, group *sync.WaitGroup, colors []int, command string, args
 	}
 
 	// ID format: index:PID:attempt where attempt increases by one each time the command is restarted
-	id := fmt.Sprintf("%d:%d:0", i, cmd.Process.Pid)
+	id := fmt.Sprintf("%d:%d:%d", i, cmd.Process.Pid, attempt)
 
 	// TODO: Beware of printing all args, since the user might pass sensitive data as env vars for the game.
 	p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("running '%s' with args %s PID %d", command, args, cmd.Process.Pid)))
