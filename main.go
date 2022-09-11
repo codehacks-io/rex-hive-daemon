@@ -45,8 +45,8 @@ func main() {
 	wg.Wait()
 }
 
-const initialBackoffDelaySeconds = 5
-const resetBackoffIfRunForSeconds = 600
+const backoffBaseDelaySeconds = 5
+const backoffResetIfUpSeconds = 600
 
 func expBackoffSeconds(attempt int) time.Duration {
 	// Cap to 5 minutes
@@ -58,7 +58,7 @@ func expBackoffSeconds(attempt int) time.Duration {
 		return 0
 	}
 
-	return time.Second * time.Duration(math.Pow(2, float64(attempt))*initialBackoffDelaySeconds)
+	return time.Second * time.Duration(math.Pow(2, float64(attempt))*backoffBaseDelaySeconds)
 }
 
 func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
@@ -84,7 +84,7 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 		elapsed := time.Since(startedAt)
 
 		// Reset backoff
-		if elapsed.Seconds() >= resetBackoffIfRunForSeconds {
+		if elapsed.Seconds() >= backoffResetIfUpSeconds {
 			backoffCount = 0
 		} else {
 			backoffCount++
