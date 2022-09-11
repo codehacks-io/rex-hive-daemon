@@ -29,11 +29,12 @@ func main() {
 	colors := p.GetRandomColors()
 
 	qs := []commandQuery{
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"1", "-1"}, Always},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"2"}, OnFailure},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"f"}, OnFailure},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"15"}, Never},
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"f"}, Never},
+		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"2"}, Always},
+		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"1", "-1"}, Always},
+		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"2"}, OnFailure},
+		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"f"}, OnFailure},
+		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"15"}, Never},
+		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"f"}, Never},
 	}
 
 	for i, q := range qs {
@@ -41,11 +42,11 @@ func main() {
 		go runCommandAndKeepAlive(i, &wg, colors, q.restartPolicy, q.command, q.args...)
 	}
 
-	// TODO: After x minutes running successfully, reset falloff
 	wg.Wait()
 }
 
 const initialBackoffDelaySeconds = 5
+const resetBackoffIfRunForSeconds = 600
 
 func expBackoffSeconds(attempt int) time.Duration {
 	// Cap to 5 minutes
@@ -70,34 +71,46 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 		return
 	}
 
-	attempt := -1
+	runCount := -1
+	backoffCount := -1
 	for {
-		attempt++
+		runCount++
+		startedAt := time.Now()
 
 		// If the command never stops, the following line will block forever
-		id, exitCode := runCommand(i, attempt, colors, command, args...)
+		id, exitCode := runCommand(i, runCount, colors, command, args...)
+
+		// Get elapsed runtime of command
+		elapsed := time.Since(startedAt)
+
+		// Reset backoff
+		if elapsed.Seconds() >= resetBackoffIfRunForSeconds {
+			backoffCount = 0
+		} else {
+			backoffCount++
+		}
 
 		// If this line is reached, the command exited, either successfully of with an error
 		switch restartPolicy {
 		case Never:
 			{
-				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), restart: Never", exitCode)))
+				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), runtime: %s, restart: Never", exitCode, elapsed)))
 				return
 			}
 		case Always:
 			{
-				backoff := expBackoffSeconds(attempt)
-				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), restart: Always, will sleep for %s and will re-run", exitCode, backoff)))
+				backoff := expBackoffSeconds(backoffCount)
+				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), runtime: %s, restart: Always, will sleep for %s and will re-run", exitCode, elapsed, backoff)))
 				time.Sleep(backoff)
 			}
 		case OnFailure:
 			{
 				if exitCode == 0 {
-					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), restart: OnFailure, will not re-run", exitCode)))
+					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), runtime: %s, restart: OnFailure, will not re-run", exitCode, elapsed)))
 					return
 				} else {
-					backoff := expBackoffSeconds(attempt)
-					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), restart: OnFailure, will sleep for %s and will re-run", exitCode, backoff)))
+					backoff := expBackoffSeconds(backoffCount)
+					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), runtime: %s, restart: OnFailure, will sleep for %s and will re-run", exitCode, elapsed, backoff)))
 					time.Sleep(backoff)
 				}
 			}
