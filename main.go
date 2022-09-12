@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"regexp"
 	"sync"
 	"time"
 )
@@ -81,6 +82,31 @@ func main() {
 	}
 
 	runFleets(fleets)
+}
+
+var getDynamicInSeq = regexp.MustCompile(`{in-seq:(?P<from>\d+)-(?P<to>\d+)}`)
+
+func getDynamicArgs(args *[]string) *[]string {
+	for i, a := range *args {
+		match := getDynamicInSeq.FindStringSubmatch(a)
+
+		result := make(map[string]string)
+		for i, name := range getDynamicInSeq.SubexpNames() {
+			if i != 0 && name != "" && len(match) > i {
+				result[name] = match[i]
+			}
+		}
+		if len(result["from"]) > 0 && len(result["to"]) > 0 {
+			fmt.Println(result["from"], result["to"])
+			(*args)[i] = "dynamic"
+		} else {
+			fmt.Println("no from or to")
+		}
+	}
+
+	fmt.Println("completed dynamic", *args)
+	return &[]string{"0"}
+	//return args
 }
 
 func runFleets(fleets *fleetSpec) {
