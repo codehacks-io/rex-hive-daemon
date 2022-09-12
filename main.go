@@ -2,8 +2,11 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"math"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -18,28 +21,72 @@ const (
 	Never
 )
 
-type commandQuery struct {
-	command       string
-	args          []string
-	restartPolicy RestartPolicy
+func (r RestartPolicy) String() string {
+	return restartPolicyToString[r]
 }
 
+var restartPolicyToString = map[RestartPolicy]string{
+	Always:    "Always",
+	OnFailure: "OnFailure",
+	Never:     "Never",
+}
+
+var stringToRestartPolicy = map[string]RestartPolicy{
+	"Always":    Always,
+	"OnFailure": OnFailure,
+	"Never":     Never,
+}
+
+// Note: struct fields must be public in order for unmarshal to correctly populate the data.
+type fleetSpec struct {
+	Metadata struct {
+		Name string `yaml:"name"`
+	}
+	Specs []struct {
+		Cmd      []string
+		Restart  string
+		Replicas int
+	}
+}
+
+func readConf(filename string) (*fleetSpec, error) {
+
+	// Read file
+	buff, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse data
+	data := &fleetSpec{}
+	err = yaml.Unmarshal(buff, data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return data, err
+}
+
+// Eg. Run with: `go run .\main.go --file=./demo-specs/test-spec.yml`
 func main() {
+	// Define cli params
+	filePathPtr := flag.String("file", "", "spec file containing args")
+	flag.Parse()
+
+	// Read and parse file
+	fleets, err := readConf(*filePathPtr)
+	if err != nil {
+		panic(err)
+	}
+
+	// Execute
 	var wg sync.WaitGroup
 	colors := p.GetRandomColors()
 
-	qs := []commandQuery{
-		{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"2"}, Always},
-		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"1", "-1"}, Always},
-		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"2"}, OnFailure},
-		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"f"}, OnFailure},
-		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"15"}, Never},
-		//{"./demo-exes/03-dynamic-sleep-cpp.exe", []string{"f"}, Never},
-	}
-
-	for i, q := range qs {
+	for i, q := range fleets.Specs {
 		wg.Add(1)
-		go runCommandAndKeepAlive(i, &wg, colors, q.restartPolicy, q.command, q.args...)
+		go runCommandAndKeepAlive(i, &wg, colors, stringToRestartPolicy[q.Restart], q.Cmd[0], q.Cmd[1:]...)
 	}
 
 	wg.Wait()

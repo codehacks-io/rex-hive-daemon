@@ -1,0 +1,25 @@
+metadata:
+  name: Game on-instance fleet demo
+specs:
+  - cmd:
+      - "./demo-exes/03-dynamic-sleep-cpp.exe"
+      - "1"
+      - "1"
+    restart: Always
+    replicas: 1
+  - cmd:
+      - "./demo-exes/03-dynamic-sleep-cpp.exe"
+      - "1"
+    restart: Always
+    replicas: 1
+    # This will create 2 instances of the game, the first one running (possibly) on port 7000 and the other one on 7001
+#  - cmd:
+#      - "/app/game-server-linux"
+#      - "/Game/GameName/Maps/MapName.umap"
+#      - "-server"
+#      - "-game"
+#      - "-log"
+#      - "-PORT={port:7000-8000}"
+#      - "-networkversionoverride=1666999666"
+#    restart: Always
+#    replicas: 2
