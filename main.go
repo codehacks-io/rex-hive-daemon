@@ -84,9 +84,13 @@ func main() {
 	var wg sync.WaitGroup
 	colors := p.GetRandomColors()
 
-	for i, q := range fleets.Specs {
-		wg.Add(1)
-		go runCommandAndKeepAlive(i, &wg, colors, stringToRestartPolicy[q.Restart], q.Cmd[0], q.Cmd[1:]...)
+	count := 0
+	for _, f := range fleets.Specs {
+		for rep := 0; rep < f.Replicas; rep++ {
+			wg.Add(1)
+			go runCommandAndKeepAlive(count, &wg, colors, stringToRestartPolicy[f.Restart], f.Cmd[0], f.Cmd[1:]...)
+			count++
+		}
 	}
 
 	wg.Wait()
