@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -84,41 +85,63 @@ func main() {
 	runFleets(fleets)
 }
 
-var getDynamicInSeq = regexp.MustCompile(`{in-seq:(?P<from>\d+)-(?P<to>\d+)}`)
+var getUniqueInSequenceRegex = regexp.MustCompile(`{unique-in-sequence:(?P<from>\d+)-(?P<to>\d+)}`)
 
-func getDynamicArgs(args *[]string) *[]string {
-	for i, a := range *args {
-		match := getDynamicInSeq.FindStringSubmatch(a)
+func getDynamicArgs(originalArgs []string, used *map[int]bool) []string {
+
+	replacedArgs := make([]string, len(originalArgs))
+	copy(replacedArgs, originalArgs)
+
+	for i, a := range originalArgs {
+		match := getUniqueInSequenceRegex.FindStringSubmatch(a)
 
 		result := make(map[string]string)
-		for i, name := range getDynamicInSeq.SubexpNames() {
-			if i != 0 && name != "" && len(match) > i {
-				result[name] = match[i]
+		for ii, name := range getUniqueInSequenceRegex.SubexpNames() {
+			if ii != 0 && name != "" && len(match) > ii {
+				result[name] = match[ii]
 			}
 		}
 		if len(result["from"]) > 0 && len(result["to"]) > 0 {
-			fmt.Println(result["from"], result["to"])
-			(*args)[i] = "dynamic"
-		} else {
-			fmt.Println("no from or to")
+			from, _ := strconv.Atoi(result["from"])
+			to, _ := strconv.Atoi(result["to"])
+
+			// Swap is from is greater than to
+			if from > to {
+				oldTo := to
+				to = from
+				from = oldTo
+			}
+
+			didAssign := false
+			for seq := from; seq <= to; seq++ {
+				if !(*used)[seq] {
+					replacedArgs[i] = strconv.Itoa(seq)
+					(*used)[seq] = true
+					didAssign = true
+					break
+				}
+			}
+			if !didAssign {
+				panic(fmt.Sprintf("dynamic argument %s cannot be allocated a value, all values in the sequense have been reserved", a))
+			}
 		}
 	}
 
-	fmt.Println("completed dynamic", *args)
-	return &[]string{"0"}
-	//return args
+	return replacedArgs
 }
 
 func runFleets(fleets *fleetSpec) {
 	// Execute
 	var wg sync.WaitGroup
 	colors := p.GetRandomColors()
+	var usedNumsInSequence = map[int]bool{}
 
 	count := 0
 	for _, f := range fleets.Specs {
 		for rep := 0; rep < f.Replicas; rep++ {
 			wg.Add(1)
-			go runCommandAndKeepAlive(count, &wg, colors, stringToRestartPolicy[f.Restart], f.Cmd[0], f.Cmd[1:]...)
+			args := getDynamicArgs(f.Cmd[1:], &usedNumsInSequence)
+			go runCommandAndKeepAlive(count, &wg, colors, stringToRestartPolicy[f.Restart], f.Cmd[0], args...)
 			count++
 		}
 	}

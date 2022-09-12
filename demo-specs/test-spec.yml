@@ -3,14 +3,14 @@ metadata:
 specs:
   - cmd:
       - "./demo-exes/03-dynamic-sleep-cpp.exe"
-      - "1"
-      - "1"
-    restart: Always
-    replicas: 1
+      - "{unique-in-sequence:1-2}"
+    restart: Never
+    replicas: 2
   - cmd:
       - "./demo-exes/03-dynamic-sleep-cpp.exe"
       - "1"
-    restart: Always
+      - "{unique-in-sequence:1-3}"
+    restart: Never
     replicas: 1
     # This will create 2 instances of the game, the first one running (possibly) on port 7000 and the other one on 7001
 #  - cmd:
@@ -19,7 +19,7 @@ specs:
 #      - "-server"
 #      - "-game"
 #      - "-log"
-#      - "-PORT={port:7000-8000}"
+#      - "-PORT={unique-in-sequence:7000-8000}"
 #      - "-networkversionoverride=1666999666"
 #    restart: Always
 #    replicas: 2
