@@ -129,7 +129,7 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 		startedAt := time.Now()
 
 		// If the command never stops, the following line will block forever
-		id, exitCode := runCommand(i, runCount, colors, command, args...)
+		id, exitCode := runCommand(i, restartPolicy, runCount, colors, command, args...)
 
 		// Get elapsed runtime of command
 		elapsed := time.Since(startedAt)
@@ -142,26 +142,27 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 		}
 
 		// If this line is reached, the command exited, either successfully of with an error
+		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("runtime: %s", elapsed)))
 		switch restartPolicy {
 		case Never:
 			{
-				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), runtime: %s, restart: Never", exitCode, elapsed)))
+				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("won't re-run")))
 				return
 			}
 		case Always:
 			{
 				backoff := expBackoffSeconds(backoffCount)
-				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), runtime: %s, restart: Always, will sleep for %s and will re-run", exitCode, elapsed, backoff)))
+				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("will re-run after %s", backoff)))
 				time.Sleep(backoff)
 			}
 		case OnFailure:
 			{
 				if exitCode == 0 {
-					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), runtime: %s, restart: OnFailure, will not re-run", exitCode, elapsed)))
+					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("won't re-run")))
 					return
 				} else {
 					backoff := expBackoffSeconds(backoffCount)
-					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("terminated with exit code (%d), runtime: %s, restart: OnFailure, will sleep for %s and will re-run", exitCode, elapsed, backoff)))
+					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("will re-run after %s", backoff)))
 					time.Sleep(backoff)
 				}
 			}
@@ -169,7 +170,7 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 	}
 }
 
-func runCommand(i int, attempt int, colors []int, command string, args ...string) (name string, pid int) {
+func runCommand(i int, restart RestartPolicy, attempt int, colors []int, command string, args ...string) (name string, pid int) {
 
 	// Execute command
 	cmd := exec.Command(command, args...)
@@ -178,7 +179,7 @@ func runCommand(i int, attempt int, colors []int, command string, args ...string
 	stdout, err := cmd.StdoutPipe()
 	stderr, err := cmd.StderrPipe()
 
-	cmdSummary := fmt.Sprintf("'%s' with args %s", command, args)
+	cmdSummary := fmt.Sprintf("'%s', args: %s, restart: %s", command, args, restartPolicyToString[restart])
 
 	// Start command
 	if err = cmd.Start(); err != nil {
@@ -191,7 +192,7 @@ func runCommand(i int, attempt int, colors []int, command string, args ...string
 	id := fmt.Sprintf("%d:%d:%d", i, cmd.Process.Pid, attempt)
 
 	// TODO: Beware of printing all args, since the user might pass sensitive data as env vars for the game.
-	p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("running %s PID %d", cmdSummary, cmd.Process.Pid)))
+	p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("running %s, PID %d", cmdSummary, cmd.Process.Pid)))
 
 	// Print realtime stdout from command
 	go func() {
@@ -213,10 +214,10 @@ func runCommand(i int, attempt int, colors []int, command string, args ...string
 
 	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
-		p.PrintLnColor(id, colors, i, p.ErrColor(fmt.Sprintf("%s exited with error", cmdSummary)), err.Error())
+		p.PrintLnColor(id, colors, i, p.ErrColor(fmt.Sprintf("%s. Error-exited with code (%d)", cmdSummary, cmd.ProcessState.ExitCode())), err.Error())
 		return id, cmd.ProcessState.ExitCode()
 	} else {
-		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("%s exited with success code", cmdSummary)))
+		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("%s. Success-exited with code (%d)", cmdSummary, cmd.ProcessState.ExitCode())))
 		return id, 0
 	}
 }
