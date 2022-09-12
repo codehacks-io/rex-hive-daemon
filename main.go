@@ -80,6 +80,10 @@ func main() {
 		panic(err)
 	}
 
+	runFleets(fleets)
+}
+
+func runFleets(fleets *fleetSpec) {
 	// Execute
 	var wg sync.WaitGroup
 	colors := p.GetRandomColors()
