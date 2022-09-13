@@ -1,25 +1,39 @@
+kind: ProcessSwarm
 metadata:
-  name: Game on-instance fleet demo
-specs:
-  - cmd:
-      - "./demo-exes/03-dynamic-sleep-cpp.exe"
-      - "{unique-in-sequence:1-2}"
-    restart: Never
-    replicas: 2
-  - cmd:
-      - "./demo-exes/03-dynamic-sleep-cpp.exe"
-      - "1"
-      - "{unique-in-sequence:1-3}"
-    restart: Never
-    replicas: 1
-    # This will create 2 instances of the game, the first one running (possibly) on port 7000 and the other one on 7001
-#  - cmd:
-#      - "/app/game-server-linux"
-#      - "/Game/GameName/Maps/MapName.umap"
-#      - "-server"
-#      - "-game"
-#      - "-log"
-#      - "-PORT={unique-in-sequence:7000-8000}"
-#      - "-networkversionoverride=1666999666"
-#    restart: Always
-#    replicas: 2
+  name: rex-swarm-test
+secretGenerator:
+  - envs:
+      - .app-secrets/api.env
+    name: the-game-secrets
+spec:
+  processes:
+    - name: "rex-balloon-pop-squads-night"
+      env:
+        - name: GAME_APP_MAX_PLAYERS
+          value: 8
+        - name: GAME_APP_DAY_TIME
+          value: night
+        - name: GAME_APP_FLOOR_COLOR
+          value: "#326de6"
+        - name: GAME_APP_LOGO_COLOR
+          value: "#e60012"
+        - name: GAME_APP_INFINITE_AMMO
+          value: "true"
+        - name: GAME_APP_REX_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: the-game-secrets
+              key: THE_REX_TOKEN
+      cmd:
+        - "./demo-exes/03-dynamic-sleep-cpp.exe"
+        - "{unique-in-sequence:1-20}"
+# A more realistic command looks like so:
+#        - "/app/game-server-linux"
+#        - "/Game/GameName/Maps/MapName.umap"
+#        - "-server"
+#        - "-game"
+#        - "-log"
+#        - "-PORT={unique-in-sequence:7000-8000}"
+#        - "-networkversionoverride=1666999666"
+      restart: Always
+      replicas: 2

@@ -39,19 +39,32 @@ var stringToRestartPolicy = map[string]RestartPolicy{
 	"Never":     Never,
 }
 
-// Note: struct fields must be public in order for unmarshal to correctly populate the data.
-type fleetSpec struct {
+type ProcessSwarm struct {
+	Kind     string
 	Metadata struct {
-		Name string `yaml:"name"`
+		Name string
 	}
-	Specs []struct {
-		Cmd      []string
-		Restart  string
-		Replicas int
+	Spec struct {
+		ProcessSpecs []struct {
+			Name string
+			Env  []struct {
+				Name      string
+				Value     string
+				ValueFrom struct {
+					SecretKeyRef struct {
+						Name string
+						Key  string
+					}
+				}
+			}
+			Cmd      []string
+			Restart  string
+			Replicas int
+		} `yaml:"processes"`
 	}
 }
 
-func readConf(filename string) (*fleetSpec, error) {
+func readConf(filename string) (*ProcessSwarm, error) {
 
 	// Read file
 	buff, err := os.ReadFile(filename)
@@ -60,7 +73,7 @@ func readConf(filename string) (*fleetSpec, error) {
 	}
 
 	// Parse data
-	data := &fleetSpec{}
+	data := &ProcessSwarm{}
 	err = yaml.Unmarshal(buff, data)
 
 	if err != nil {
@@ -77,12 +90,12 @@ func main() {
 	flag.Parse()
 
 	// Read and parse file
-	fleets, err := readConf(*filePathPtr)
+	swarmSpec, err := readConf(*filePathPtr)
 	if err != nil {
 		panic(err)
 	}
 
-	runFleets(fleets)
+	runProcessSwarm(swarmSpec)
 }
 
 var getUniqueInSequenceRegex = regexp.MustCompile(`{unique-in-sequence:(?P<from>\d+)-(?P<to>\d+)}`)
@@ -130,18 +143,26 @@ func getDynamicArgs(originalArgs []string, used *map[int]bool) []string {
 	return replacedArgs
 }
 
-func runFleets(fleets *fleetSpec) {
+func runProcessSwarm(swarmSpec *ProcessSwarm) {
+
+	if len((*swarmSpec).Spec.ProcessSpecs) < 1 {
+		fmt.Println("No process specs to run")
+		return
+	} else {
+		fmt.Println(fmt.Sprintf("Found %d process specs", len((*swarmSpec).Spec.ProcessSpecs)))
+	}
+
 	// Execute
 	var wg sync.WaitGroup
 	colors := p.GetRandomColors()
 	var usedNumsInSequence = map[int]bool{}
 
 	count := 0
-	for _, f := range fleets.Specs {
-		for rep := 0; rep < f.Replicas; rep++ {
+	for _, s := range swarmSpec.Spec.ProcessSpecs {
+		for rep := 0; rep < s.Replicas; rep++ {
 			wg.Add(1)
-			args := getDynamicArgs(f.Cmd[1:], &usedNumsInSequence)
-			go runCommandAndKeepAlive(count, &wg, colors, stringToRestartPolicy[f.Restart], f.Cmd[0], args...)
+			args := getDynamicArgs(s.Cmd[1:], &usedNumsInSequence)
+			go runCommandAndKeepAlive(count, &wg, colors, stringToRestartPolicy[s.Restart], s.Cmd[0], args...)
 			count++
 		}
 	}
