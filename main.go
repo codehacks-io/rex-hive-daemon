@@ -5,10 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"gopkg.in/yaml.v3"
-	"math"
 	"os"
 	"os/exec"
 	"regexp"
+	"rex-daemon/backoff"
 	"strconv"
 	"sync"
 	"time"
@@ -170,22 +170,6 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	wg.Wait()
 }
 
-const backoffBaseDelaySeconds = 5
-const backoffResetIfUpSeconds = 600
-
-func expBackoffSeconds(attempt int) time.Duration {
-	// Cap to 5 minutes
-	if attempt >= 6 {
-		return time.Second * 300
-	}
-
-	if attempt < 0 {
-		return 0
-	}
-
-	return time.Second * time.Duration(math.Pow(2, float64(attempt))*backoffBaseDelaySeconds)
-}
-
 func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
 	// Sync with wait group
 	defer group.Done()
@@ -209,7 +193,7 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 		elapsed := time.Since(startedAt)
 
 		// Reset backoff
-		if elapsed.Seconds() >= backoffResetIfUpSeconds {
+		if elapsed.Seconds() >= backoff.BackoffResetIfUpSeconds {
 			backoffCount = 0
 		} else {
 			backoffCount++
@@ -225,9 +209,9 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 			}
 		case Always:
 			{
-				backoff := expBackoffSeconds(backoffCount)
-				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("will re-run after %s", backoff)))
-				time.Sleep(backoff)
+				delay := backoff.ExpBackoffSeconds(backoffCount)
+				p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("will re-run after %s", delay)))
+				time.Sleep(delay)
 			}
 		case OnFailure:
 			{
@@ -235,9 +219,9 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("won't re-run")))
 					return
 				} else {
-					backoff := expBackoffSeconds(backoffCount)
-					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("will re-run after %s", backoff)))
-					time.Sleep(backoff)
+					delay := backoff.ExpBackoffSeconds(backoffCount)
+					p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("will re-run after %s", delay)))
+					time.Sleep(delay)
 				}
 			}
 		}
