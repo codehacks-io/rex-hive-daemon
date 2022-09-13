@@ -101,7 +101,7 @@ func main() {
 
 var getUniqueInSequenceRegex = regexp.MustCompile(`{unique-in-sequence:(?P<from>\d+)-(?P<to>\d+)}`)
 
-func getDynamicArgs(originalArgs []string, used *map[int]bool) []string {
+func getDynamicArgsOrPanic(originalArgs []string, used *map[int]bool) []string {
 
 	replacedArgs := make([]string, len(originalArgs))
 	copy(replacedArgs, originalArgs)
@@ -142,8 +142,6 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	if len((*swarmSpec).Spec.ProcessSpecs) < 1 {
 		fmt.Println("No process specs to run")
 		return
-	} else {
-		fmt.Println(fmt.Sprintf("Found %d process specs", len((*swarmSpec).Spec.ProcessSpecs)))
 	}
 
 	// Execute
@@ -152,10 +150,25 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	var usedNumsInSequence = map[int]bool{}
 
 	count := 0
+
+	// Before running any process, validate that we can get all the dynamic args
+	for _, s := range swarmSpec.Spec.ProcessSpecs {
+		for rep := 0; rep < s.Replicas; rep++ {
+			// This line will panic if we cannot get all the dynamic args
+			getDynamicArgsOrPanic(s.Cmd[1:], &usedNumsInSequence)
+			count++
+		}
+	}
+	usedNumsInSequence = map[int]bool{} // Reset map of used nums after validation
+	fmt.Println(fmt.Sprintf("Process specs: %d, total processes: %d", len((*swarmSpec).Spec.ProcessSpecs), count))
+	count = 0 // Also reset count
+	// End of validations
+
+	// Spawn process swarm
 	for _, s := range swarmSpec.Spec.ProcessSpecs {
 		for rep := 0; rep < s.Replicas; rep++ {
 			wg.Add(1)
-			args := getDynamicArgs(s.Cmd[1:], &usedNumsInSequence)
+			args := getDynamicArgsOrPanic(s.Cmd[1:], &usedNumsInSequence)
 			go runCommandAndKeepAlive(count, &wg, colors, stringToRestartPolicy[s.Restart], s.Cmd[0], args...)
 			count++
 		}
