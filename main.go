@@ -4,85 +4,12 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"gopkg.in/yaml.v3"
-	"os"
 	"os/exec"
-	"regexp"
 	"rex-daemon/backoff"
-	"rex-daemon/rexregexp"
-	"strconv"
 	"sync"
 	"time"
 )
 import p "rex-daemon/rexprint"
-
-type RestartPolicy int
-
-const (
-	Always RestartPolicy = iota
-	OnFailure
-	Never
-)
-
-func (r RestartPolicy) String() string {
-	return restartPolicyToString[r]
-}
-
-var restartPolicyToString = map[RestartPolicy]string{
-	Always:    "Always",
-	OnFailure: "OnFailure",
-	Never:     "Never",
-}
-
-var stringToRestartPolicy = map[string]RestartPolicy{
-	"Always":    Always,
-	"OnFailure": OnFailure,
-	"Never":     Never,
-}
-
-type ProcessSwarm struct {
-	Kind     string
-	Metadata struct {
-		Name string
-	}
-	Spec struct {
-		ProcessSpecs []struct {
-			Name string
-			Env  []struct {
-				Name      string
-				Value     string
-				ValueFrom struct {
-					SecretKeyRef struct {
-						Name string
-						Key  string
-					}
-				}
-			}
-			Cmd      []string
-			Restart  string
-			Replicas int
-		} `yaml:"processes"`
-	}
-}
-
-func readConf(filename string) (*ProcessSwarm, error) {
-
-	// Read file
-	buff, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse data
-	data := &ProcessSwarm{}
-	err = yaml.Unmarshal(buff, data)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return data, err
-}
 
 // Eg. Run with: `go run .\main.go --file=./demo-specs/test-spec.yml`
 func main() {
@@ -97,44 +24,6 @@ func main() {
 	}
 
 	runProcessSwarm(swarmSpec)
-}
-
-var getUniqueInSequenceRegex = regexp.MustCompile(`{unique-in-sequence:(?P<from>\d+)-(?P<to>\d+)}`)
-
-func getDynamicArgsOrPanic(originalArgs []string, used *map[int]bool) []string {
-
-	replacedArgs := make([]string, len(originalArgs))
-	copy(replacedArgs, originalArgs)
-
-	for i, arg := range originalArgs {
-		matches := rexregexp.MatchNamedCapturingGroups(&arg, getUniqueInSequenceRegex)
-		if len(matches["from"]) > 0 && len(matches["to"]) > 0 {
-			from, _ := strconv.Atoi(matches["from"])
-			to, _ := strconv.Atoi(matches["to"])
-
-			// Swap is from is greater than to
-			if from > to {
-				oldTo := to
-				to = from
-				from = oldTo
-			}
-
-			didAssign := false
-			for seq := from; seq <= to; seq++ {
-				if !(*used)[seq] {
-					replacedArgs[i] = strconv.Itoa(seq)
-					(*used)[seq] = true
-					didAssign = true
-					break
-				}
-			}
-			if !didAssign {
-				panic(fmt.Sprintf("dynamic argument %s cannot be allocated a value, all values in the sequense have been reserved", arg))
-			}
-		}
-	}
-
-	return replacedArgs
 }
 
 func runProcessSwarm(swarmSpec *ProcessSwarm) {
