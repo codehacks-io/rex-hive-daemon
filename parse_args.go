@@ -30,7 +30,7 @@ func getDynamicArgsOrPanic(originalArgs *[]string, used *map[int]bool) []string 
 			didAssign := false
 			for seq := from; seq <= to; seq++ {
 				if !(*used)[seq] {
-					replacedArgs[i] = strconv.Itoa(seq)
+					replacedArgs[i] = getUniqueInSequenceRegex.ReplaceAllString(arg, strconv.Itoa(seq))
 					(*used)[seq] = true
 					didAssign = true
 					break
