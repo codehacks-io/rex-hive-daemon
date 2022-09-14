@@ -93,6 +93,7 @@ func bulkStoreMessagesInMongo() {
 
 	// Get array of message IDs to store. Using mutex lock to make it goroutine-safe.
 	lockForWriting.Lock()
+	lockForHolding.Lock() // Lock the 'holding' map to quickly get messages to write
 	writingMessages = make([]string, len(holdingMessages))
 	i := 0
 	for k := range holdingMessages {
@@ -101,8 +102,18 @@ func bulkStoreMessagesInMongo() {
 	}
 	fmt.Println("------------  will store --------------", len(writingMessages))
 
+	// Prepare data to write into MongoDB
+	docs := make([]interface{}, len(writingMessages))
+	for index, key := range writingMessages {
+		docs[index] = holdingMessages[key]
+		i++
+	}
+
+	// IMPORTANT: Unlock the 'holding' map before trying to write to DB since that op could take a few seconds.
+	lockForHolding.Unlock()
+
 	// Insert data in MongoDB
-	_, err := coll.InsertOne(context.TODO(), bson.D{{"data", "yeah, it does work"}})
+	_, err := coll.InsertMany(context.TODO(), docs)
 
 	if err != nil {
 		// Reset the writing array, even if data fails to be stored in DB
