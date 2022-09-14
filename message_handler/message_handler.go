@@ -29,7 +29,7 @@ func Run() {
 	mongoAddTestData()
 }
 
-func mongoAddTestData() {
+func connectDb() *mongo.Client {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
@@ -41,6 +41,11 @@ func mongoAddTestData() {
 	if err != nil {
 		panic(err)
 	}
+	return client
+}
+
+func mongoAddTestData() {
+	client := connectDb()
 	defer func() {
 		if err := client.Disconnect(context.TODO()); err != nil {
 			panic(err)
