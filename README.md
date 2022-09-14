@@ -27,5 +27,5 @@ MONGODB_URI="mongodb://SwarmChan:superSwarmChan-hunter2@localhost:27017/" go run
 You can easily run mongo db locally using Docker:
 
 ```shell
-docker run --name mongodb --rm -d -v ./my_mongo_data/:/data/db -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=SwarmChan -e MONGO_INITDB_ROOT_PASSWORD=superSwarmChan-hunter2 mongo:5.0.12
+docker run --name mongodb -d -v ./my_mongo_data/:/data/db -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=SwarmChan -e MONGO_INITDB_ROOT_PASSWORD=superSwarmChan-hunter2 mongo:5.0.12
 ```
