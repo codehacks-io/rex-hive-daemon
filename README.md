@@ -12,16 +12,6 @@ Run example swarm:
 go run . --file=./demo-specs/test-spec.yml
 ```
 
-If you're using mongodb too:
-
-```shell
-# on windows (power shell)
-$env:MONGODB_URI="mongodb://SwarmChan:superSwarmChan-hunter2@localhost:27017/"; go run . --file=./demo-specs/test-spec.yml
-
-# on linux
-MONGODB_URI="mongodb://SwarmChan:superSwarmChan-hunter2@localhost:27017/" go run . --file=./demo-specs/test-spec.yml
-```
-
 -----
 
 You can easily run mongo db locally using Docker:
