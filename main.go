@@ -25,6 +25,7 @@ func main() {
 		panic(err)
 	}
 
+	go message_handler.Run()
 	runProcessSwarm(swarmSpec)
 }
 
@@ -72,7 +73,7 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	}()
 
 	for c := range swarmChan {
-		message_handler.ProcessSwarmMessage(&c)
+		go message_handler.ProcessSwarmMessage(&c)
 	}
 }
 

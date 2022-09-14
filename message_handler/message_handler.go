@@ -11,9 +11,18 @@ var (
 	lock     sync.Mutex
 )
 
+var didStartup = false
+
+func Run() {
+	if didStartup {
+		return
+	}
+	didStartup = true
+}
+
 func ProcessSwarmMessage(message *swarm_message.SwarmMessage) {
 	lock.Lock()
 	messages = append(messages, message)
 	lock.Unlock()
-	fmt.Println(fmt.Sprintf("(%d) Received msg from %d", len(messages), (*message).Pid))
+	fmt.Println(fmt.Sprintf("(%d) Received msg from %d: %+v", len(messages), (*message).Pid, *message))
 }
