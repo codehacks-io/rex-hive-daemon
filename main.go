@@ -33,11 +33,7 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 		return
 	}
 
-	// Execute
-	var wg sync.WaitGroup
-	colors := p.GetRandomColors()
 	var usedNumsInSequence = map[int]bool{}
-
 	count := 0
 
 	// Before running any process, validate that we can get all the dynamic args
@@ -53,20 +49,30 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	count = 0 // Also reset count
 	// End of validations
 
-	// Spawn process swarm
-	for _, s := range swarmSpec.Spec.ProcessSpecs {
-		for rep := 0; rep < s.Replicas; rep++ {
-			wg.Add(1)
-			args := getDynamicArgsOrPanic(s.Cmd[1:], &usedNumsInSequence)
-			go runCommandAndKeepAlive(count, &wg, colors, stringToRestartPolicy[s.Restart], s.Cmd[0], args...)
-			count++
-		}
-	}
+	swarmChan := make(chan int)
 
-	wg.Wait()
+	go func() {
+		// Spawn process swarm
+		var wg sync.WaitGroup
+		colors := p.GetRandomColors()
+		for _, s := range swarmSpec.Spec.ProcessSpecs {
+			for rep := 0; rep < s.Replicas; rep++ {
+				wg.Add(1)
+				args := getDynamicArgsOrPanic(s.Cmd[1:], &usedNumsInSequence)
+				go runCommandAndKeepAlive(&swarmChan, count, &wg, colors, stringToRestartPolicy[s.Restart], s.Cmd[0], args...)
+				count++
+			}
+		}
+		wg.Wait()
+		close(swarmChan)
+	}()
+
+	for c := range swarmChan {
+		fmt.Println("Received PID", c)
+	}
 }
 
-func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
+func runCommandAndKeepAlive(swarmChan *chan int, i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
 	// Sync with wait group
 	defer group.Done()
 
@@ -82,8 +88,8 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 		runCount++
 		startedAt := time.Now()
 
-		// If the command never stops, the following line will block forever
-		id, exitCode := runCommand(i, restartPolicy, runCount, colors, command, args...)
+		// If the command never stops, the following line will block until command execution terminates
+		id, exitCode := runCommand(swarmChan, i, restartPolicy, runCount, colors, command, args...)
 
 		// Get elapsed runtime of command
 		elapsed := time.Since(startedAt)
@@ -124,7 +130,7 @@ func runCommandAndKeepAlive(i int, group *sync.WaitGroup, colors []int, restartP
 	}
 }
 
-func runCommand(i int, restart RestartPolicy, attempt int, colors []int, command string, args ...string) (name string, pid int) {
+func runCommand(swarmChan *chan int, i int, restart RestartPolicy, attempt int, colors []int, command string, args ...string) (name string, pid int) {
 
 	// Execute command
 	cmd := exec.Command(command, args...)
@@ -141,6 +147,9 @@ func runCommand(i int, restart RestartPolicy, attempt int, colors []int, command
 		p.PrintLnColor(noPidId, colors, i, p.ErrColor(fmt.Sprintf("cannot start %s: %s", cmdSummary, err.Error())))
 		return noPidId, -1
 	}
+
+	// At this point we've got a PID for the process
+	*swarmChan <- cmd.Process.Pid
 
 	// ID format: index:PID:attempt where attempt increases by one each time the command is restarted
 	id := fmt.Sprintf("%d:%d:%d", i, cmd.Process.Pid, attempt)
