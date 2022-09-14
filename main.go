@@ -26,6 +26,24 @@ func main() {
 	runProcessSwarm(swarmSpec)
 }
 
+type swarmMessageType int
+
+const (
+	processStarted swarmMessageType = iota
+	processExited
+	processStdOut
+	processStdErr
+)
+
+type SwarmMessage struct {
+	Index    int
+	Pid      int
+	Attempt  int
+	Type     swarmMessageType
+	Data     string
+	ExitCode int
+}
+
 func runProcessSwarm(swarmSpec *ProcessSwarm) {
 
 	if len((*swarmSpec).Spec.ProcessSpecs) < 1 {
@@ -49,7 +67,7 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	count = 0 // Also reset count
 	// End of validations
 
-	swarmChan := make(chan int)
+	swarmChan := make(chan SwarmMessage)
 
 	go func() {
 		// Spawn process swarm
@@ -68,11 +86,11 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	}()
 
 	for c := range swarmChan {
-		fmt.Println("Received PID", c)
+		fmt.Println(fmt.Sprintf("Received msg %+v", c))
 	}
 }
 
-func runCommandAndKeepAlive(swarmChan *chan int, i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
+func runCommandAndKeepAlive(swarmChan *chan SwarmMessage, i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
 	// Sync with wait group
 	defer group.Done()
 
@@ -130,7 +148,7 @@ func runCommandAndKeepAlive(swarmChan *chan int, i int, group *sync.WaitGroup, c
 	}
 }
 
-func runCommand(swarmChan *chan int, i int, restart RestartPolicy, attempt int, colors []int, command string, args ...string) (name string, pid int) {
+func runCommand(swarmChan *chan SwarmMessage, i int, restart RestartPolicy, attempt int, colors []int, command string, args ...string) (name string, pid int) {
 
 	// Execute command
 	cmd := exec.Command(command, args...)
@@ -149,7 +167,14 @@ func runCommand(swarmChan *chan int, i int, restart RestartPolicy, attempt int, 
 	}
 
 	// At this point we've got a PID for the process
-	*swarmChan <- cmd.Process.Pid
+	*swarmChan <- SwarmMessage{
+		Index:    i,
+		Pid:      cmd.Process.Pid,
+		Attempt:  attempt,
+		Type:     processStarted,
+		Data:     "",
+		ExitCode: 0,
+	}
 
 	// ID format: index:PID:attempt where attempt increases by one each time the command is restarted
 	id := fmt.Sprintf("%d:%d:%d", i, cmd.Process.Pid, attempt)
