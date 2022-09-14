@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,11 +13,17 @@ import (
 	"os"
 	"rex-daemon/swarm_message"
 	"sync"
+	"time"
 )
 
+const storeToDatabaseEverySeconds = 1
+const databaseTimeoutSeconds = 5
+
 var (
-	messages []*swarm_message.SwarmMessage
-	lock     sync.Mutex
+	holdingMessages = map[string]*swarm_message.SwarmMessage{}
+	writingMessages []string
+	lockForHolding  sync.Mutex
+	lockForWriting  sync.Mutex
 )
 
 var didStartup = false
@@ -26,47 +33,96 @@ func Run() {
 		return
 	}
 	didStartup = true
-	mongoAddTestData()
+
+	for {
+		time.Sleep(storeToDatabaseEverySeconds * time.Second)
+		go hearBeat()
+	}
+}
+
+func hearBeat() {
+	bulkStoreMessagesInMongo()
 }
 
 func connectDb() *mongo.Client {
+	// Get connection string
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
 	uri := os.Getenv("MONGODB_URI")
 	if uri == "" {
-		log.Fatal("You must set your 'MONGODB_URI' environmental variable. See\n\t https://www.mongodb.com/docs/drivers/go/current/usage-examples/#environment-variable")
+		log.Println("You must set your 'MONGODB_URI' environmental variable. See\n\t https://www.mongodb.com/docs/drivers/go/current/usage-examples/#environment-variable")
 	}
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
+
+	// Connect to database
+	t := databaseTimeoutSeconds * time.Second
+	opts := options.Client().ApplyURI(uri).SetTimeout(t).SetConnectTimeout(t).SetSocketTimeout(t).SetServerSelectionTimeout(t)
+	client, err := mongo.Connect(context.TODO(), opts)
+
+	// Handle connection error
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		return nil
 	}
+
 	return client
 }
 
-func mongoAddTestData() {
+func bulkStoreMessagesInMongo() {
+	// If no holding messages, there's nothing to store
+	if len(holdingMessages) <= 0 {
+		fmt.Println("------------  nothing to store, skipping --------------")
+		return
+	}
+
+	// Get DB connection
 	client := connectDb()
+	if client == nil {
+		return
+	}
+
+	// Disconnect from DB on exit
 	defer func() {
 		if err := client.Disconnect(context.TODO()); err != nil {
 			panic(err)
 		}
 	}()
 
+	// Get DB collection
 	coll := client.Database("swarm-chan").Collection("process-messages")
-	result, err := coll.InsertOne(context.TODO(), bson.D{{"data", "yeah, it does work"}})
+
+	// Get array of message IDs to store. Using mutex lock to make it goroutine-safe.
+	lockForWriting.Lock()
+	writingMessages = make([]string, len(holdingMessages))
+	i := 0
+	for k := range holdingMessages {
+		writingMessages[i] = k
+		i++
+	}
+	fmt.Println("------------  will store --------------", len(writingMessages))
+
+	// Insert data in MongoDB
+	_, err := coll.InsertOne(context.TODO(), bson.D{{"data", "yeah, it does work"}})
 
 	if err != nil {
-		panic(err)
+		// Reset the writing array, even if data fails to be stored in DB
+		writingMessages = []string{}
+		lockForWriting.Unlock() // Unlock writing array even if DB storing fails
+		log.Println(err)
+	} else {
+		// Remove the stored messages from temp holding map. Using its own mutex to manipulate the map.
+		lockForHolding.Lock()
+		fmt.Println("-- Store succeeded, holding before store ", len(holdingMessages))
+		for _, k := range writingMessages {
+			delete(holdingMessages, k)
+		}
+		fmt.Println("-- Holding after store ", len(holdingMessages))
+		lockForHolding.Unlock()
+
+		// Reset the writing array, as data has been written to DB
+		writingMessages = []string{}
+		lockForWriting.Unlock() // Unlock writing array after DB storing completes
 	}
-
-	fmt.Println("success")
-
-	jsonData, err := json.MarshalIndent(result, "", "    ")
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("%s\n", jsonData)
 }
 
 func testMongo() {
@@ -108,8 +164,8 @@ func testMongo() {
 }
 
 func ProcessSwarmMessage(message *swarm_message.SwarmMessage) {
-	lock.Lock()
-	messages = append(messages, message)
-	lock.Unlock()
-	fmt.Println(fmt.Sprintf("(%d) Received msg from %d: %+v", len(messages), (*message).Pid, *message))
+	lockForHolding.Lock()
+	idd, _ := uuid.NewRandom()
+	holdingMessages[idd.String()] = message
+	lockForHolding.Unlock()
 }

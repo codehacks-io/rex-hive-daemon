@@ -36,4 +36,4 @@ spec:
 #        - "-PORT={unique-in-sequence:7000-8000}"
 #        - "-networkversionoverride=1666999666"
       restart: Always
-      replicas: 2
+      replicas: 1
