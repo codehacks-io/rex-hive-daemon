@@ -201,6 +201,14 @@ func runCommand(swarmChan *chan SwarmMessage, i int, restart RestartPolicy, atte
 		for scanner.Scan() {
 			m := scanner.Text()
 			p.PrintLnColor(id, colors, i, p.OutColor("STDOUT"), m)
+			*swarmChan <- SwarmMessage{
+				Index:    i,
+				Pid:      cmd.Process.Pid,
+				Attempt:  attempt,
+				Type:     processStdOut,
+				Data:     m,
+				ExitCode: noExitCode,
+			}
 		}
 	}()
 
@@ -210,15 +218,39 @@ func runCommand(swarmChan *chan SwarmMessage, i int, restart RestartPolicy, atte
 		for scannerErr.Scan() {
 			m := scannerErr.Text()
 			p.PrintLnColor(id, colors, i, p.ErrColor("STDERR"), m)
+			*swarmChan <- SwarmMessage{
+				Index:    i,
+				Pid:      cmd.Process.Pid,
+				Attempt:  attempt,
+				Type:     processStdErr,
+				Data:     m,
+				ExitCode: noExitCode,
+			}
 		}
 	}()
 
 	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
 		p.PrintLnColor(id, colors, i, p.ErrColor(fmt.Sprintf("%s. Error-exited with code (%d)", cmdSummary, cmd.ProcessState.ExitCode())), err.Error())
+		*swarmChan <- SwarmMessage{
+			Index:    i,
+			Pid:      cmd.Process.Pid,
+			Attempt:  attempt,
+			Type:     processExited,
+			Data:     err.Error(),
+			ExitCode: cmd.ProcessState.ExitCode(),
+		}
 		return id, cmd.ProcessState.ExitCode()
 	} else {
 		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("%s. Success-exited with code (%d)", cmdSummary, cmd.ProcessState.ExitCode())))
+		*swarmChan <- SwarmMessage{
+			Index:    i,
+			Pid:      cmd.Process.Pid,
+			Attempt:  attempt,
+			Type:     processExited,
+			Data:     "",
+			ExitCode: 0, // 0 = success
+		}
 		return id, 0
 	}
 }
