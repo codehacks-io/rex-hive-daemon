@@ -29,7 +29,8 @@ func main() {
 type swarmMessageType int
 
 const (
-	processStarted swarmMessageType = iota
+	processAborted swarmMessageType = iota
+	processStarted
 	processExited
 	processStdOut
 	processStdErr
@@ -148,6 +149,9 @@ func runCommandAndKeepAlive(swarmChan *chan SwarmMessage, i int, group *sync.Wai
 	}
 }
 
+const invalidPid = -1
+const noExitCode = -1
+
 func runCommand(swarmChan *chan SwarmMessage, i int, restart RestartPolicy, attempt int, colors []int, command string, args ...string) (name string, pid int) {
 
 	// Execute command
@@ -161,26 +165,35 @@ func runCommand(swarmChan *chan SwarmMessage, i int, restart RestartPolicy, atte
 
 	// Start command
 	if err = cmd.Start(); err != nil {
-		noPidId := fmt.Sprintf("%d:noPID:%d", i, attempt)
+		noPidId := fmt.Sprintf("%d:%d:%d", i, invalidPid, attempt)
 		p.PrintLnColor(noPidId, colors, i, p.ErrColor(fmt.Sprintf("cannot start %s: %s", cmdSummary, err.Error())))
-		return noPidId, -1
+		*swarmChan <- SwarmMessage{
+			Index:    i,
+			Pid:      invalidPid,
+			Attempt:  attempt,
+			Type:     processAborted,
+			Data:     err.Error(),
+			ExitCode: noExitCode,
+		}
+		return noPidId, invalidPid
 	}
 
 	// At this point we've got a PID for the process
-	*swarmChan <- SwarmMessage{
-		Index:    i,
-		Pid:      cmd.Process.Pid,
-		Attempt:  attempt,
-		Type:     processStarted,
-		Data:     "",
-		ExitCode: 0,
-	}
 
 	// ID format: index:PID:attempt where attempt increases by one each time the command is restarted
 	id := fmt.Sprintf("%d:%d:%d", i, cmd.Process.Pid, attempt)
 
 	// TODO: Beware of printing all args, since the user might pass sensitive data as env vars for the game.
 	p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("running %s, PID %d", cmdSummary, cmd.Process.Pid)))
+
+	*swarmChan <- SwarmMessage{
+		Index:    i,
+		Pid:      cmd.Process.Pid,
+		Attempt:  attempt,
+		Type:     processStarted,
+		Data:     "",
+		ExitCode: noExitCode,
+	}
 
 	// Print realtime stdout from command
 	go func() {
