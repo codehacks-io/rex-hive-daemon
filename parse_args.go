@@ -9,12 +9,12 @@ import (
 
 var getUniqueInSequenceRegex = regexp.MustCompile(`{unique-in-sequence:(?P<from>\d+)-(?P<to>\d+)}`)
 
-func getDynamicArgsOrPanic(originalArgs []string, used *map[int]bool) []string {
+func getDynamicArgsOrPanic(originalArgs *[]string, used *map[int]bool) []string {
 
-	replacedArgs := make([]string, len(originalArgs))
-	copy(replacedArgs, originalArgs)
+	replacedArgs := make([]string, len(*originalArgs))
+	copy(replacedArgs, *originalArgs)
 
-	for i, arg := range originalArgs {
+	for i, arg := range *originalArgs {
 		matches := rexregexp.MatchNamedCapturingGroups(&arg, getUniqueInSequenceRegex)
 		if len(matches["from"]) > 0 && len(matches["to"]) > 0 {
 			from, _ := strconv.Atoi(matches["from"])

@@ -59,7 +59,8 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	for _, s := range swarmSpec.Spec.ProcessSpecs {
 		for rep := 0; rep < s.Replicas; rep++ {
 			// This line will panic if we cannot get all the dynamic args
-			getDynamicArgsOrPanic(s.Cmd[1:], &usedNumsInSequence)
+			args := s.Cmd[1:]
+			getDynamicArgsOrPanic(&args, &usedNumsInSequence)
 			count++
 		}
 	}
@@ -77,8 +78,9 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 		for _, s := range swarmSpec.Spec.ProcessSpecs {
 			for rep := 0; rep < s.Replicas; rep++ {
 				wg.Add(1)
-				args := getDynamicArgsOrPanic(s.Cmd[1:], &usedNumsInSequence)
-				go runCommandAndKeepAlive(&swarmChan, count, &wg, colors, stringToRestartPolicy[s.Restart], s.Cmd[0], args...)
+				args := s.Cmd[1:]
+				replacedArgs := getDynamicArgsOrPanic(&args, &usedNumsInSequence)
+				go runCommandAndKeepAlive(&swarmChan, count, &wg, colors, stringToRestartPolicy[s.Restart], s.Cmd[0], replacedArgs...)
 				count++
 			}
 		}
