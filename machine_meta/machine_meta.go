@@ -1,9 +1,14 @@
 package machine_meta
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
+	"time"
 )
 
 func GetMachineMeta() MachineMeta {
@@ -54,7 +59,27 @@ func GetMachineMeta() MachineMeta {
 	if r, err := exec.Command("uname", "--operating-system").Output(); err == nil {
 		m.Uname.OperatingSystem = string(r)
 	}
+	m.AwsEc2Meta = *getAwsMeta()
 	return m
+}
+
+func getAwsMeta() *AwsEc2IdentityDoc {
+	res, err := http.Get("http://169.254.169.254/latest/dynamic/instance-identity/document") // Constant URL
+	if err != nil {
+		fmt.Println("Cannot call AWS info endpoint. Program might not be running on AWS")
+		return nil
+	}
+
+	if res.StatusCode != 200 {
+		fmt.Println(fmt.Sprintf("Called call AWS endpoint but received status code %d", res.StatusCode))
+		return nil
+	}
+
+	b, _ := io.ReadAll(res.Body)
+
+	doc := &AwsEc2IdentityDoc{}
+	_ = json.Unmarshal(b, doc)
+	return doc
 }
 
 type LsbRelease struct {
@@ -80,4 +105,23 @@ type MachineMeta struct {
 	Goarch     string
 	LsbRelease LsbRelease
 	Uname      Uname
+	AwsEc2Meta AwsEc2IdentityDoc
+}
+
+type AwsEc2IdentityDoc struct {
+	AccountId               string      `json:"accountId"`
+	Architecture            string      `json:"architecture"`
+	AvailabilityZone        string      `json:"availabilityZone"`
+	BillingProducts         interface{} `json:"billingProducts"`
+	DevPayProductCodes      interface{} `json:"devpayProductCodes"`
+	MarketplaceProductCodes interface{} `json:"marketplaceProductCodes"`
+	ImageId                 string      `json:"imageId"`
+	InstanceId              string      `json:"instanceId"`
+	InstanceType            string      `json:"instanceType"`
+	KernelId                interface{} `json:"kernelId"`
+	PendingTime             time.Time   `json:"pendingTime"`
+	PrivateIp               string      `json:"privateIp"`
+	RamdiskId               interface{} `json:"ramdiskId"`
+	Region                  string      `json:"region"`
+	Version                 string      `json:"version"`
 }
