@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -23,41 +24,41 @@ func GetMachineMeta() *MachineMeta {
 	if m.Goos == "linux" {
 		m.LsbRelease = &LsbRelease{}
 		if r, err := exec.Command("lsb_release", "--id").Output(); err == nil {
-			m.LsbRelease.Id = string(r)
+			m.LsbRelease.Id = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("lsb_release", "--description").Output(); err == nil {
-			m.LsbRelease.Description = string(r)
+			m.LsbRelease.Description = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("lsb_release", "--release").Output(); err == nil {
-			m.LsbRelease.Release = string(r)
+			m.LsbRelease.Release = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("lsb_release", "--codename").Output(); err == nil {
-			m.LsbRelease.Codename = string(r)
+			m.LsbRelease.Codename = strings.Trim(string(r), "\n")
 		}
 		m.Uname = &Uname{}
 		if r, err := exec.Command("uname", "--kernel-name").Output(); err == nil {
-			m.Uname.KernelName = string(r)
+			m.Uname.KernelName = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("uname", "--nodename").Output(); err == nil {
-			m.Uname.NodeName = string(r)
+			m.Uname.NodeName = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("uname", "--kernel-release").Output(); err == nil {
-			m.Uname.KernelRelease = string(r)
+			m.Uname.KernelRelease = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("uname", "--kernel-version").Output(); err == nil {
-			m.Uname.KernelVersion = string(r)
+			m.Uname.KernelVersion = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("uname", "--machine").Output(); err == nil {
-			m.Uname.Machine = string(r)
+			m.Uname.Machine = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("uname", "--processor").Output(); err == nil {
-			m.Uname.Processor = string(r)
+			m.Uname.Processor = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("uname", "--hardware-platform").Output(); err == nil {
-			m.Uname.HardwarePlatform = string(r)
+			m.Uname.HardwarePlatform = strings.Trim(string(r), "\n")
 		}
 		if r, err := exec.Command("uname", "--operating-system").Output(); err == nil {
-			m.Uname.OperatingSystem = string(r)
+			m.Uname.OperatingSystem = strings.Trim(string(r), "\n")
 		}
 		m.AwsEc2Meta = getAwsMeta()
 	}
