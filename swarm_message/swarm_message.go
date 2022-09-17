@@ -5,14 +5,14 @@ import (
 	"time"
 )
 
-type swarmMessageType int
+type swarmMessageType string
 
 const (
-	ProcessAborted swarmMessageType = iota
-	ProcessStarted
-	ProcessExited
-	ProcessStdOut
-	ProcessStdErr
+	ProcessAborted swarmMessageType = "aborted"
+	ProcessStarted swarmMessageType = "started"
+	ProcessExited  swarmMessageType = "exited"
+	ProcessStdOut  swarmMessageType = "stdout"
+	ProcessStdErr  swarmMessageType = "stderr"
 )
 
 type SwarmMessage struct {
