@@ -21,7 +21,7 @@ func GetMachineMeta() MachineMeta {
 
 	// Get LSB (Linux Standard Base) and Distribution information.
 	m.LsbRelease = LsbRelease{}
-	if r, err := exec.Command("lsb_release", "-i").Output(); err == nil {
+	if r, err := exec.Command("lsb_release", "--id").Output(); err == nil {
 		m.LsbRelease.Id = string(r)
 	}
 	if r, err := exec.Command("lsb_release", "--description").Output(); err == nil {
