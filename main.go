@@ -27,6 +27,13 @@ func main() {
 
 	go message_handler.Run()
 	runProcessSwarm(swarmSpec)
+
+	// Wait for messages to be stored in DB (flushing)
+	fmt.Println(p.Dim("Swarm completed, waiting to flush"))
+	flushChan := make(chan bool)
+	message_handler.Flush(&flushChan)
+	<-flushChan
+	close(flushChan)
 }
 
 func runProcessSwarm(swarmSpec *ProcessSwarm) {

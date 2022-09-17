@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"rex-daemon/machine_meta"
+	"rex-daemon/rexprint"
 	"rex-daemon/swarm_message"
 	"sync"
 	"time"
@@ -27,6 +28,8 @@ var (
 	lockForWriting  sync.Mutex
 	didStartup      = false
 	machineMeta     = &machine_meta.MachineMeta{}
+	// Channels helps to block execution while there are still pending messages to store in DB
+	flushChan *chan bool
 )
 
 func Run() {
@@ -40,6 +43,10 @@ func Run() {
 		time.Sleep(storeToDatabaseEverySeconds * time.Second)
 		hearBeat()
 	}
+}
+
+func Flush(c *chan bool) {
+	flushChan = c
 }
 
 func hearBeat() {
@@ -74,6 +81,10 @@ func bulkStoreMessagesInMongo() {
 	// If no holding messages, there's nothing to store
 	if len(holdingMessages) <= 0 {
 		fmt.Println("------------  nothing to store, skipping --------------")
+		if flushChan != nil {
+			*flushChan <- true
+			flushChan = nil
+		}
 		return
 	}
 
@@ -140,6 +151,20 @@ func bulkStoreMessagesInMongo() {
 		// Reset the writing array, as data has been written to DB
 		writingMessages = []string{}
 		lockForWriting.Unlock() // Unlock writing array after DB storing completes
+	}
+
+	// If flushChan is set, flushing has been requested.
+	if flushChan != nil {
+		lockForHolding.Lock()
+		thereAreHoldingMessages := len(holdingMessages) >= 1
+		lockForHolding.Unlock()
+		if !thereAreHoldingMessages {
+			fmt.Println(rexprint.Dim("Flush requested: All messages stored in DB, flush complete."))
+			*flushChan <- true
+			flushChan = nil
+		} else {
+			fmt.Println(rexprint.Dim("Flush requested: There are pending messages to be stored in DB, will wait to flush..."))
+		}
 	}
 }
 
