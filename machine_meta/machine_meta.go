@@ -66,14 +66,16 @@ func GetMachineMeta() *MachineMeta {
 }
 
 func getAwsMeta() *AwsEc2IdentityDoc {
-	res, err := http.Get("http://169.254.169.254/latest/dynamic/instance-identity/document") // Constant URL
+	c := http.Client{}
+	c.Timeout = time.Second * 2
+	res, err := c.Get("http://169.254.169.254/latest/dynamic/instance-identity/document") // Constant URL
 	if err != nil {
-		fmt.Println("Cannot call AWS info endpoint. Program might not be running on AWS")
+		fmt.Println("Cannot call AWS EC2 info endpoint, might not be running on AWS.")
 		return nil
 	}
 
 	if res.StatusCode != 200 {
-		fmt.Println(fmt.Sprintf("Called call AWS endpoint but received status code %d", res.StatusCode))
+		fmt.Println(fmt.Sprintf("Called call AWS EC2 info endpoint but received status code %d", res.StatusCode))
 		return nil
 	}
 
