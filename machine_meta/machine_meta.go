@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-func GetMachineMeta() MachineMeta {
-	m := MachineMeta{}
+func GetMachineMeta() *MachineMeta {
+	m := &MachineMeta{}
 
 	hostname, _ := os.Hostname()
 	m.Hostname = hostname
@@ -20,46 +20,47 @@ func GetMachineMeta() MachineMeta {
 	m.Goarch = runtime.GOARCH
 
 	// Get LSB (Linux Standard Base) and Distribution information.
-	m.LsbRelease = LsbRelease{}
-	if r, err := exec.Command("lsb_release", "--id").Output(); err == nil {
-		m.LsbRelease.Id = string(r)
+	if m.Goos == "linux" {
+		m.LsbRelease = &LsbRelease{}
+		if r, err := exec.Command("lsb_release", "--id").Output(); err == nil {
+			m.LsbRelease.Id = string(r)
+		}
+		if r, err := exec.Command("lsb_release", "--description").Output(); err == nil {
+			m.LsbRelease.Description = string(r)
+		}
+		if r, err := exec.Command("lsb_release", "--release").Output(); err == nil {
+			m.LsbRelease.Release = string(r)
+		}
+		if r, err := exec.Command("lsb_release", "--codename").Output(); err == nil {
+			m.LsbRelease.Codename = string(r)
+		}
+		m.Uname = &Uname{}
+		if r, err := exec.Command("uname", "--kernel-name").Output(); err == nil {
+			m.Uname.KernelName = string(r)
+		}
+		if r, err := exec.Command("uname", "--nodename").Output(); err == nil {
+			m.Uname.NodeName = string(r)
+		}
+		if r, err := exec.Command("uname", "--kernel-release").Output(); err == nil {
+			m.Uname.KernelRelease = string(r)
+		}
+		if r, err := exec.Command("uname", "--kernel-version").Output(); err == nil {
+			m.Uname.KernelVersion = string(r)
+		}
+		if r, err := exec.Command("uname", "--machine").Output(); err == nil {
+			m.Uname.Machine = string(r)
+		}
+		if r, err := exec.Command("uname", "--processor").Output(); err == nil {
+			m.Uname.Processor = string(r)
+		}
+		if r, err := exec.Command("uname", "--hardware-platform").Output(); err == nil {
+			m.Uname.HardwarePlatform = string(r)
+		}
+		if r, err := exec.Command("uname", "--operating-system").Output(); err == nil {
+			m.Uname.OperatingSystem = string(r)
+		}
+		m.AwsEc2Meta = getAwsMeta()
 	}
-	if r, err := exec.Command("lsb_release", "--description").Output(); err == nil {
-		m.LsbRelease.Description = string(r)
-	}
-	if r, err := exec.Command("lsb_release", "--release").Output(); err == nil {
-		m.LsbRelease.Release = string(r)
-	}
-	if r, err := exec.Command("lsb_release", "--codename").Output(); err == nil {
-		m.LsbRelease.Codename = string(r)
-	}
-
-	m.Uname = Uname{}
-	if r, err := exec.Command("uname", "--kernel-name").Output(); err == nil {
-		m.Uname.KernelName = string(r)
-	}
-	if r, err := exec.Command("uname", "--nodename").Output(); err == nil {
-		m.Uname.NodeName = string(r)
-	}
-	if r, err := exec.Command("uname", "--kernel-release").Output(); err == nil {
-		m.Uname.KernelRelease = string(r)
-	}
-	if r, err := exec.Command("uname", "--kernel-version").Output(); err == nil {
-		m.Uname.KernelVersion = string(r)
-	}
-	if r, err := exec.Command("uname", "--machine").Output(); err == nil {
-		m.Uname.Machine = string(r)
-	}
-	if r, err := exec.Command("uname", "--processor").Output(); err == nil {
-		m.Uname.Processor = string(r)
-	}
-	if r, err := exec.Command("uname", "--hardware-platform").Output(); err == nil {
-		m.Uname.HardwarePlatform = string(r)
-	}
-	if r, err := exec.Command("uname", "--operating-system").Output(); err == nil {
-		m.Uname.OperatingSystem = string(r)
-	}
-	m.AwsEc2Meta = *getAwsMeta()
 	return m
 }
 
@@ -103,9 +104,9 @@ type MachineMeta struct {
 	Hostname   string
 	Goos       string
 	Goarch     string
-	LsbRelease LsbRelease
-	Uname      Uname
-	AwsEc2Meta AwsEc2IdentityDoc
+	LsbRelease *LsbRelease
+	Uname      *Uname
+	AwsEc2Meta *AwsEc2IdentityDoc
 }
 
 type AwsEc2IdentityDoc struct {

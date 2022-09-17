@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"os"
+	"rex-daemon/machine_meta"
 	"rex-daemon/swarm_message"
 	"sync"
 	"time"
@@ -24,9 +25,9 @@ var (
 	writingMessages []string
 	lockForHolding  sync.Mutex
 	lockForWriting  sync.Mutex
+	didStartup      = false
+	machineMeta     = &machine_meta.MachineMeta{}
 )
-
-var didStartup = false
 
 func Run() {
 	if didStartup {
@@ -35,6 +36,7 @@ func Run() {
 	didStartup = true
 
 	for {
+		machineMeta = machine_meta.GetMachineMeta()
 		time.Sleep(storeToDatabaseEverySeconds * time.Second)
 		go hearBeat()
 	}
@@ -89,7 +91,7 @@ func bulkStoreMessagesInMongo() {
 	}()
 
 	// Get DB collection
-	coll := client.Database("swarm-chan").Collection("process-messages")
+	coll := client.Database("swarm-chan").Collection("m")
 
 	// Get array of message IDs to store. Using mutex lock to make it goroutine-safe.
 	lockForWriting.Lock()
@@ -177,6 +179,7 @@ func testMongo() {
 func ProcessSwarmMessage(message *swarm_message.SwarmMessage) {
 	lockForHolding.Lock()
 	idd, _ := uuid.NewRandom()
+	message.Machine = machineMeta
 	holdingMessages[idd.String()] = message
 	lockForHolding.Unlock()
 }

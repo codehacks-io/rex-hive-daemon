@@ -1,5 +1,7 @@
 package swarm_message
 
+import "rex-daemon/machine_meta"
+
 type swarmMessageType int
 
 const (
@@ -17,4 +19,5 @@ type SwarmMessage struct {
 	Type     swarmMessageType
 	Data     string
 	ExitCode int
+	Machine  *machine_meta.MachineMeta
 }
