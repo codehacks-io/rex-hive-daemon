@@ -53,7 +53,7 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	count = 0 // Also reset count
 	// End of validations
 
-	swarmChan := make(chan swarm_message.SwarmMessage)
+	swarmChan := make(chan *swarm_message.SwarmMessage)
 
 	go func() {
 		// Spawn process swarm
@@ -73,11 +73,11 @@ func runProcessSwarm(swarmSpec *ProcessSwarm) {
 	}()
 
 	for c := range swarmChan {
-		go message_handler.ProcessSwarmMessage(&c)
+		go message_handler.ProcessSwarmMessage(c)
 	}
 }
 
-func runCommandAndKeepAlive(swarmChan *chan swarm_message.SwarmMessage, i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
+func runCommandAndKeepAlive(swarmChan *chan *swarm_message.SwarmMessage, i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
 	// Sync with wait group
 	defer group.Done()
 
@@ -138,7 +138,7 @@ func runCommandAndKeepAlive(swarmChan *chan swarm_message.SwarmMessage, i int, g
 const invalidPid = -1
 const noExitCode = -1
 
-func runCommand(swarmChan *chan swarm_message.SwarmMessage, i int, restart RestartPolicy, attempt int, colors []int, command string, args ...string) (name string, pid int) {
+func runCommand(swarmChan *chan *swarm_message.SwarmMessage, i int, restart RestartPolicy, attempt int, colors []int, command string, args ...string) (name string, pid int) {
 
 	// Execute command
 	cmd := exec.Command(command, args...)
@@ -153,7 +153,7 @@ func runCommand(swarmChan *chan swarm_message.SwarmMessage, i int, restart Resta
 	if err = cmd.Start(); err != nil {
 		noPidId := fmt.Sprintf("%d:%d:%d", i, invalidPid, attempt)
 		p.PrintLnColor(noPidId, colors, i, p.ErrColor(fmt.Sprintf("cannot start %s: %s", cmdSummary, err.Error())))
-		*swarmChan <- swarm_message.SwarmMessage{
+		*swarmChan <- &swarm_message.SwarmMessage{
 			Index:    i,
 			Pid:      invalidPid,
 			Attempt:  attempt,
@@ -172,7 +172,7 @@ func runCommand(swarmChan *chan swarm_message.SwarmMessage, i int, restart Resta
 	// TODO: Beware of printing all args, since the user might pass sensitive data as env vars for the game.
 	p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("running %s, PID %d", cmdSummary, cmd.Process.Pid)))
 
-	*swarmChan <- swarm_message.SwarmMessage{
+	*swarmChan <- &swarm_message.SwarmMessage{
 		Index:    i,
 		Pid:      cmd.Process.Pid,
 		Attempt:  attempt,
@@ -187,7 +187,7 @@ func runCommand(swarmChan *chan swarm_message.SwarmMessage, i int, restart Resta
 		for scanner.Scan() {
 			m := scanner.Text()
 			p.PrintLnColor(id, colors, i, p.OutColor("STDOUT"), m)
-			*swarmChan <- swarm_message.SwarmMessage{
+			*swarmChan <- &swarm_message.SwarmMessage{
 				Index:    i,
 				Pid:      cmd.Process.Pid,
 				Attempt:  attempt,
@@ -204,7 +204,7 @@ func runCommand(swarmChan *chan swarm_message.SwarmMessage, i int, restart Resta
 		for scannerErr.Scan() {
 			m := scannerErr.Text()
 			p.PrintLnColor(id, colors, i, p.ErrColor("STDERR"), m)
-			*swarmChan <- swarm_message.SwarmMessage{
+			*swarmChan <- &swarm_message.SwarmMessage{
 				Index:    i,
 				Pid:      cmd.Process.Pid,
 				Attempt:  attempt,
@@ -218,7 +218,7 @@ func runCommand(swarmChan *chan swarm_message.SwarmMessage, i int, restart Resta
 	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
 		p.PrintLnColor(id, colors, i, p.ErrColor(fmt.Sprintf("%s. Error-exited with code (%d)", cmdSummary, cmd.ProcessState.ExitCode())), err.Error())
-		*swarmChan <- swarm_message.SwarmMessage{
+		*swarmChan <- &swarm_message.SwarmMessage{
 			Index:    i,
 			Pid:      cmd.Process.Pid,
 			Attempt:  attempt,
@@ -229,7 +229,7 @@ func runCommand(swarmChan *chan swarm_message.SwarmMessage, i int, restart Resta
 		return id, cmd.ProcessState.ExitCode()
 	} else {
 		p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("%s. Success-exited with code (%d)", cmdSummary, cmd.ProcessState.ExitCode())))
-		*swarmChan <- swarm_message.SwarmMessage{
+		*swarmChan <- &swarm_message.SwarmMessage{
 			Index:    i,
 			Pid:      cmd.Process.Pid,
 			Attempt:  attempt,
