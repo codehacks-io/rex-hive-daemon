@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -22,18 +23,19 @@ func GetMachineMeta() *MachineMeta {
 
 	// Get LSB (Linux Standard Base) and Distribution information.
 	if m.Goos == "linux" {
+		re := regexp.MustCompile(`(.+:\s*)`)
 		m.LsbRelease = &LsbRelease{}
 		if r, err := exec.Command("lsb_release", "--id").Output(); err == nil {
-			m.LsbRelease.Id = strings.Trim(string(r), "\n")
+			m.LsbRelease.Id = re.ReplaceAllString(strings.Trim(string(r), "\n"), "")
 		}
 		if r, err := exec.Command("lsb_release", "--description").Output(); err == nil {
-			m.LsbRelease.Description = strings.Trim(string(r), "\n")
+			m.LsbRelease.Description = re.ReplaceAllString(strings.Trim(string(r), "\n"), "")
 		}
 		if r, err := exec.Command("lsb_release", "--release").Output(); err == nil {
-			m.LsbRelease.Release = strings.Trim(string(r), "\n")
+			m.LsbRelease.Release = re.ReplaceAllString(strings.Trim(string(r), "\n"), "")
 		}
 		if r, err := exec.Command("lsb_release", "--codename").Output(); err == nil {
-			m.LsbRelease.Codename = strings.Trim(string(r), "\n")
+			m.LsbRelease.Codename = re.ReplaceAllString(strings.Trim(string(r), "\n"), "")
 		}
 		m.Uname = &Uname{}
 		if r, err := exec.Command("uname", "--kernel-name").Output(); err == nil {
