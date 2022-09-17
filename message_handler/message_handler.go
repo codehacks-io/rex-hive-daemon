@@ -19,6 +19,7 @@ import (
 )
 
 const storeToDatabaseEverySeconds = 1
+const maxMessagesToStorePerRequest = 50
 const databaseTimeoutSeconds = 5
 
 var (
@@ -77,6 +78,13 @@ func connectDb() *mongo.Client {
 	return client
 }
 
+func min(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func bulkStoreMessagesInMongo() {
 	// If no holding messages, there's nothing to store
 	if len(holdingMessages) <= 0 {
@@ -107,7 +115,10 @@ func bulkStoreMessagesInMongo() {
 	// Get array of message IDs to store. Using mutex lock to make it goroutine-safe.
 	lockForWriting.Lock()
 	lockForHolding.Lock() // Lock the 'holding' map to quickly get messages to write
-	writingMessages = make([]string, len(holdingMessages))
+	holdingMessagesLength := len(holdingMessages)
+	toWriteLength := min(holdingMessagesLength, maxMessagesToStorePerRequest)
+	fmt.Println(rexprint.Dim(fmt.Sprintf("Will store messages. Holding: %d, Max: %d", holdingMessagesLength, maxMessagesToStorePerRequest)))
+	writingMessages = make([]string, toWriteLength)
 	i := 0
 	for k, v := range holdingMessages {
 		writingMessages[i] = k
@@ -117,8 +128,10 @@ func bulkStoreMessagesInMongo() {
 		// that the machine meta has been fully initialized.
 		v.Machine = machineMeta
 		i++
+		if i >= toWriteLength {
+			break
+		}
 	}
-	fmt.Println("------------  will store --------------", len(writingMessages))
 
 	// Prepare data to write into MongoDB
 	docs := make([]interface{}, len(writingMessages))
