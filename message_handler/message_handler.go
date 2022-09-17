@@ -38,7 +38,7 @@ func Run() {
 
 	for {
 		time.Sleep(storeToDatabaseEverySeconds * time.Second)
-		go hearBeat()
+		hearBeat()
 	}
 }
 
