@@ -60,8 +60,8 @@ func GetMachineMeta() *MachineMeta {
 		if r, err := exec.Command("uname", "--operating-system").Output(); err == nil {
 			m.Uname.OperatingSystem = strings.Trim(string(r), "\n")
 		}
-		m.AwsEc2Meta = getAwsMeta()
 	}
+	m.AwsEc2Meta = getAwsMeta()
 	return m
 }
 
