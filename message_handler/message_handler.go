@@ -88,7 +88,7 @@ func min(a int, b int) int {
 func bulkStoreMessagesInMongo() {
 	// If no holding messages, there's nothing to store
 	if len(holdingMessages) <= 0 {
-		fmt.Println("------------  nothing to store, skipping --------------")
+		fmt.Println(rexprint.Dim("Holding zero messages, skipping save"))
 		if flushChan != nil {
 			*flushChan <- true
 			flushChan = nil
