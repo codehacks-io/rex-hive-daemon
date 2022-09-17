@@ -117,7 +117,7 @@ func bulkStoreMessagesInMongo() {
 	lockForHolding.Lock() // Lock the 'holding' map to quickly get messages to write
 	holdingMessagesLength := len(holdingMessages)
 	toWriteLength := min(holdingMessagesLength, maxMessagesToStorePerRequest)
-	fmt.Println(rexprint.Dim(fmt.Sprintf("Will store messages. Holding: %d, Max: %d", holdingMessagesLength, maxMessagesToStorePerRequest)))
+	fmt.Println(rexprint.Dim(fmt.Sprintf("Will store %d messages. Holding: %d, Max: %d", toWriteLength, holdingMessagesLength, maxMessagesToStorePerRequest)))
 	writingMessages = make([]string, toWriteLength)
 	i := 0
 	for k, v := range holdingMessages {
@@ -154,11 +154,11 @@ func bulkStoreMessagesInMongo() {
 	} else {
 		// Remove the stored messages from temp holding map. Using its own mutex to manipulate the map.
 		lockForHolding.Lock()
-		fmt.Println("-- Store succeeded, holding before store ", len(holdingMessages))
+		beforeStoreSize := len(holdingMessages)
 		for _, k := range writingMessages {
 			delete(holdingMessages, k)
 		}
-		fmt.Println("-- Holding after store ", len(holdingMessages))
+		fmt.Println(rexprint.Dim(fmt.Sprintf("Stored %d messages. Held before: %d, hold now: %d", len(writingMessages), beforeStoreSize, len(holdingMessages))))
 		lockForHolding.Unlock()
 
 		// Reset the writing array, as data has been written to DB
