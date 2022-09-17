@@ -1,6 +1,9 @@
 package swarm_message
 
-import "rex-daemon/machine_meta"
+import (
+	"rex-daemon/machine_meta"
+	"time"
+)
 
 type swarmMessageType int
 
@@ -20,4 +23,5 @@ type SwarmMessage struct {
 	Data     string
 	ExitCode int
 	Machine  *machine_meta.MachineMeta
+	Time     time.Time
 }

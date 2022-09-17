@@ -221,6 +221,7 @@ func testMongo() {
 
 func ProcessSwarmMessage(message *swarm_message.SwarmMessage) {
 	lockForHolding.Lock()
+	message.Time = time.Now()
 	idd, _ := uuid.NewRandom()
 	holdingMessages[idd.String()] = message
 	lockForHolding.Unlock()
