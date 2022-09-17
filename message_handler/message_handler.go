@@ -34,9 +34,9 @@ func Run() {
 		return
 	}
 	didStartup = true
+	machineMeta = machine_meta.GetMachineMeta()
 
 	for {
-		machineMeta = machine_meta.GetMachineMeta()
 		time.Sleep(storeToDatabaseEverySeconds * time.Second)
 		go hearBeat()
 	}
