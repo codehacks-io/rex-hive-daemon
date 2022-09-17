@@ -98,8 +98,13 @@ func bulkStoreMessagesInMongo() {
 	lockForHolding.Lock() // Lock the 'holding' map to quickly get messages to write
 	writingMessages = make([]string, len(holdingMessages))
 	i := 0
-	for k := range holdingMessages {
+	for k, v := range holdingMessages {
 		writingMessages[i] = k
+		// Add machine meta right before sending it to DB
+		// NOTE: We're not attaching machine meta when message is received because machine meta might not be
+		// fully initialized yet. However, when the heartbeat for saving logs to DB start, it's guaranteed
+		// that the machine meta has been fully initialized.
+		v.Machine = machineMeta
 		i++
 	}
 	fmt.Println("------------  will store --------------", len(writingMessages))
@@ -179,7 +184,6 @@ func testMongo() {
 func ProcessSwarmMessage(message *swarm_message.SwarmMessage) {
 	lockForHolding.Lock()
 	idd, _ := uuid.NewRandom()
-	message.Machine = machineMeta
 	holdingMessages[idd.String()] = message
 	lockForHolding.Unlock()
 }
