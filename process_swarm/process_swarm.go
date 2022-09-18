@@ -3,7 +3,7 @@ package process_swarm
 import (
 	"gopkg.in/yaml.v3"
 	"os"
-	"rex-daemon/machine_meta"
+	"rex-swarm-daemon/machine_meta"
 )
 
 type ProcessSwarm struct {

@@ -5,14 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"os/exec"
-	"rex-daemon/backoff"
-	"rex-daemon/message_handler"
-	"rex-daemon/process_swarm"
-	"rex-daemon/swarm_message"
+	"rex-swarm-daemon/backoff"
+	"rex-swarm-daemon/message_handler"
+	"rex-swarm-daemon/process_swarm"
+	"rex-swarm-daemon/swarm_message"
 	"sync"
 	"time"
 )
-import p "rex-daemon/rexprint"
+import p "rex-swarm-daemon/rexprint"
 
 // Eg. Run with: `go run .\main.go --file=./demo-specs/test-spec.yml`
 func main() {

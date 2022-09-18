@@ -1,7 +1,7 @@
 package swarm_message
 
 import (
-	"rex-daemon/machine_meta"
+	"rex-swarm-daemon/machine_meta"
 	"time"
 )
 

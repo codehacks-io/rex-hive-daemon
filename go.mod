@@ -1,4 +1,4 @@
-module rex-daemon
+module rex-swarm-daemon
 
 go 1.19
 

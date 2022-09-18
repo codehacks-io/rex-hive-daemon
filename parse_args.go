@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"regexp"
-	"rex-daemon/rexregexp"
+	"rex-swarm-daemon/rexregexp"
 	"strconv"
 )
 
