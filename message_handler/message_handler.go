@@ -154,6 +154,7 @@ func bulkStoreMessagesInMongo() {
 		writingMessages[i] = k
 		// Add machine meta right before sending it to DB
 		v.RuntimeMachine = machineMeta
+		v.SwarmSpecId = swarmSpecId
 		i++
 		if i >= toWriteLength {
 			break

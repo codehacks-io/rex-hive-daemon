@@ -22,6 +22,7 @@ type SwarmMessage struct {
 	Type           swarmMessageType          `bson:"type"`
 	Data           string                    `bson:"data,omitempty"`
 	ExitCode       int                       `bson:"exitCode"`
+	SwarmSpecId    interface{}               `bson:"swarmSpecId"`
 	RuntimeMachine *machine_meta.MachineMeta `bson:"runtimeMachine,omitempty"`
 	Time           time.Time                 `bson:"time"`
 }
