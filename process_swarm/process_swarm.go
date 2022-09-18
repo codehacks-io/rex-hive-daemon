@@ -3,6 +3,7 @@ package process_swarm
 import (
 	"gopkg.in/yaml.v3"
 	"os"
+	"rex-daemon/machine_meta"
 )
 
 type ProcessSwarm struct {
@@ -28,6 +29,8 @@ type ProcessSwarm struct {
 			Replicas int      `bson:"replicas"`
 		} `yaml:"processes" bson:"processSpecs"`
 	} `bson:"spec"`
+	// This field os not populated by the yml spec but at run time
+	RuntimeMachine *machine_meta.MachineMeta `bson:"runtimeMachine,omitempty"`
 }
 
 func FromFile(filename string) (*ProcessSwarm, error) {

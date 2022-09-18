@@ -35,7 +35,8 @@ var (
 	didStartup      = false
 	machineMeta     = &machine_meta.MachineMeta{}
 	// Channels helps to block execution while there are still pending messages to store in DB
-	flushChan *chan bool
+	flushChan   *chan bool
+	swarmSpecId interface{}
 )
 
 func Run(swarmSpec *process_swarm.ProcessSwarm) {
@@ -46,11 +47,13 @@ func Run(swarmSpec *process_swarm.ProcessSwarm) {
 
 	// Get machine metadata
 	machineMeta = machine_meta.GetMachineMeta()
-	swarmSpecId, err := insertOne(mongoCollectionSpecs, swarmSpec)
+	swarmSpec.RuntimeMachine = machineMeta
+	insertResult, err := insertOne(mongoCollectionSpecs, swarmSpec)
 	if err != nil {
 		fmt.Println("cannot insert swarm spec in mongodb", rexprint.ErrColor(err.Error()))
 	} else {
-		fmt.Println(rexprint.OutColor(fmt.Sprintf("swarm spec id inserted as %s", swarmSpecId.InsertedID)))
+		swarmSpecId = insertResult.InsertedID
+		fmt.Println(rexprint.OutColor(fmt.Sprintf("swarm spec id inserted as %s", swarmSpecId)))
 	}
 
 	for {
@@ -150,7 +153,7 @@ func bulkStoreMessagesInMongo() {
 	for k, v := range holdingMessages {
 		writingMessages[i] = k
 		// Add machine meta right before sending it to DB
-		v.Machine = machineMeta
+		v.RuntimeMachine = machineMeta
 		i++
 		if i >= toWriteLength {
 			break
