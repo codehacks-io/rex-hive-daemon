@@ -91,7 +91,7 @@ func insertMany(collection string, documents []interface{}) (*mongo.InsertManyRe
 	// Disconnect from DB on exit
 	defer func() {
 		if err := client.Disconnect(context.TODO()); err != nil {
-			panic(err)
+			fmt.Println(rexprint.ErrColor(err.Error()))
 		}
 	}()
 
@@ -187,11 +187,11 @@ func testMongo() {
 	}
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
 	if err != nil {
-		panic(err)
+		fmt.Println(rexprint.ErrColor(err.Error()))
 	}
 	defer func() {
 		if err := client.Disconnect(context.TODO()); err != nil {
-			panic(err)
+			fmt.Println(rexprint.ErrColor(err.Error()))
 		}
 	}()
 
@@ -206,11 +206,11 @@ func testMongo() {
 	}
 
 	if err != nil {
-		panic(err)
+		fmt.Println(rexprint.ErrColor(err.Error()))
 	}
 	jsonData, err := json.MarshalIndent(result, "", "    ")
 	if err != nil {
-		panic(err)
+		fmt.Println(rexprint.ErrColor(err.Error()))
 	}
 	fmt.Printf("%s\n", jsonData)
 }
