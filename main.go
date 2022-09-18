@@ -26,7 +26,7 @@ func main() {
 		panic(err)
 	}
 
-	go message_handler.Run()
+	go message_handler.Run(swarmSpec)
 	runProcessSwarm(swarmSpec)
 
 	// Wait for messages to be stored in DB (flushing)

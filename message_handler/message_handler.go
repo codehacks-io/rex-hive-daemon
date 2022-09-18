@@ -25,6 +25,7 @@ const maxMessagesToStorePerRequest = 50
 const databaseTimeoutSeconds = 5
 const mongoDatabaseName = "swarm-chan"
 const mongoCollectionMessages = "m"
+const mongoCollectionSpecs = "s"
 
 var (
 	holdingMessages = map[string]*swarm_message.SwarmMessage{}
@@ -37,12 +38,20 @@ var (
 	flushChan *chan bool
 )
 
-func Run() {
+func Run(swarmSpec *process_swarm.ProcessSwarm) {
 	if didStartup {
 		return
 	}
 	didStartup = true
+
+	// Get machine metadata
 	machineMeta = machine_meta.GetMachineMeta()
+	swarmSpecId, err := insertOne(mongoCollectionSpecs, swarmSpec)
+	if err != nil {
+		fmt.Println("cannot insert swarm spec in mongodb", rexprint.ErrColor(err.Error()))
+	} else {
+		fmt.Println(rexprint.OutColor(fmt.Sprintf("swarm spec id inserted as %s", swarmSpecId.InsertedID)))
+	}
 
 	for {
 		time.Sleep(storeToDatabaseEverySeconds * time.Second)
@@ -79,6 +88,25 @@ func min(a int, b int) int {
 		return a
 	}
 	return b
+}
+
+func insertOne(collection string, document interface{}) (*mongo.InsertOneResult, error) {
+	// Get DB connection
+	client, err := connectDb()
+	if err != nil {
+		return nil, err
+	}
+
+	// Disconnect from DB on exit
+	defer func() {
+		if err := client.Disconnect(context.TODO()); err != nil {
+			fmt.Println(rexprint.ErrColor(err.Error()))
+		}
+	}()
+
+	// Get DB collection
+	coll := client.Database(mongoDatabaseName).Collection(collection)
+	return coll.InsertOne(context.TODO(), document)
 }
 
 func insertMany(collection string, documents []interface{}) (*mongo.InsertManyResult, error) {
