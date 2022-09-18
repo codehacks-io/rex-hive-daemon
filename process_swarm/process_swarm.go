@@ -1,4 +1,4 @@
-package main
+package process_swarm
 
 import (
 	"gopkg.in/yaml.v3"
@@ -30,7 +30,7 @@ type ProcessSwarm struct {
 	} `bson:"spec"`
 }
 
-func readConf(filename string) (*ProcessSwarm, error) {
+func FromFile(filename string) (*ProcessSwarm, error) {
 
 	// Read file
 	buff, err := os.ReadFile(filename)

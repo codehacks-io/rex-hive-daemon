@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"rex-daemon/backoff"
 	"rex-daemon/message_handler"
+	"rex-daemon/process_swarm"
 	"rex-daemon/swarm_message"
 	"sync"
 	"time"
@@ -20,7 +21,7 @@ func main() {
 	flag.Parse()
 
 	// Read and parse file
-	swarmSpec, err := readConf(*filePathPtr)
+	swarmSpec, err := process_swarm.FromFile(*filePathPtr)
 	if err != nil {
 		panic(err)
 	}
@@ -36,7 +37,7 @@ func main() {
 	close(flushChan)
 }
 
-func runProcessSwarm(swarmSpec *ProcessSwarm) {
+func runProcessSwarm(swarmSpec *process_swarm.ProcessSwarm) {
 
 	if len((*swarmSpec).Spec.ProcessSpecs) < 1 {
 		fmt.Println("No process specs to run")
