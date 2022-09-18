@@ -89,29 +89,29 @@ func getAwsMeta() *AwsEc2IdentityDoc {
 }
 
 type LsbRelease struct {
-	Id          string // eg: Distributor ID: Ubuntu
-	Description string // eg: Description:    Ubuntu 20.04.5 LTS
-	Release     string // eg: Release:        20.04
-	Codename    string // eg: Codename:       focal
+	Id          string `bson:"id,omitempty"`          // eg: Distributor ID: Ubuntu
+	Description string `bson:"description,omitempty"` // eg: Description:    Ubuntu 20.04.5 LTS
+	Release     string `bson:"release,omitempty"`     // eg: Release:        20.04
+	Codename    string `bson:"codename,omitempty"`    // eg: Codename:       focal
 }
 type Uname struct {
-	KernelName       string // eg: Linux
-	NodeName         string // eg: GODLIKE
-	KernelRelease    string // eg: 5.10.16.3-microsoft-standard-WSL2
-	KernelVersion    string // eg: #1 SMP Fri Apr 2 22:23:49 UTC 2021
-	Machine          string // eg: x86_64
-	Processor        string // eg: x86_64
-	HardwarePlatform string // eg: x86_64
-	OperatingSystem  string // eg: GNU/Linux
+	KernelName       string `bson:"kernelName,omitempty"`       // eg: Linux
+	NodeName         string `bson:"nodeName,omitempty"`         // eg: GODLIKE
+	KernelRelease    string `bson:"kernelRelease,omitempty"`    // eg: 5.10.16.3-microsoft-standard-WSL2
+	KernelVersion    string `bson:"kernelVersion,omitempty"`    // eg: #1 SMP Fri Apr 2 22:23:49 UTC 2021
+	Machine          string `bson:"machine,omitempty"`          // eg: x86_64
+	Processor        string `bson:"processor,omitempty"`        // eg: x86_64
+	HardwarePlatform string `bson:"hardwarePlatform,omitempty"` // eg: x86_64
+	OperatingSystem  string `bson:"operatingSystem,omitempty"`  // eg: GNU/Linux
 }
 
 type MachineMeta struct {
-	Hostname   string
-	Goos       string
-	Goarch     string
-	LsbRelease *LsbRelease
-	Uname      *Uname
-	AwsEc2Meta *AwsEc2IdentityDoc
+	Hostname   string             `bson:"hostname,omitempty"` // eg: ip-172-31-80-24
+	Goos       string             `bson:"goos,omitempty"`     // eg: linux
+	Goarch     string             `bson:"goarch,omitempty"`   // eg: amd64
+	LsbRelease *LsbRelease        `bson:"lsbRelease,omitempty"`
+	Uname      *Uname             `bson:"uname,omitempty"`
+	AwsEc2Meta *AwsEc2IdentityDoc `bson:"awsEc2Meta,omitempty"`
 }
 
 type AwsEc2IdentityDoc struct {

@@ -16,12 +16,12 @@ const (
 )
 
 type SwarmMessage struct {
-	Index    int
-	Pid      int
-	Attempt  int
-	Type     swarmMessageType
-	Data     string
-	ExitCode int
-	Machine  *machine_meta.MachineMeta
-	Time     time.Time
+	Index    int                       `bson:"index"`
+	Pid      int                       `bson:"pid"`
+	Attempt  int                       `bson:"attempt"`
+	Type     swarmMessageType          `bson:"type"`
+	Data     string                    `bson:"data,omitempty"`
+	ExitCode int                       `bson:"exitCode"`
+	Machine  *machine_meta.MachineMeta `bson:"machine,omitempty"`
+	Time     time.Time                 `bson:"time"`
 }
