@@ -6,28 +6,28 @@ import (
 )
 
 type ProcessSwarm struct {
-	Kind     string
+	Kind     string `bson:"kind"`
 	Metadata struct {
-		Name string
-	}
+		Name string `bson:"name"`
+	} `bson:"metadata"`
 	Spec struct {
 		ProcessSpecs []struct {
-			Name string
+			Name string `bson:"name"`
 			Env  []struct {
-				Name      string
-				Value     string
+				Name      string `bson:"name"`
+				Value     string `bson:"value"`
 				ValueFrom struct {
 					SecretKeyRef struct {
-						Name string
-						Key  string
-					}
-				}
-			}
-			Cmd      []string
-			Restart  string
-			Replicas int
-		} `yaml:"processes"`
-	}
+						Name string `bson:"name"`
+						Key  string `bson:"key"`
+					} `bson:"secretKeyRef"`
+				} `bson:"valueFrom"`
+			} `bson:"env"`
+			Cmd      []string `bson:"cmd"`
+			Restart  string   `bson:"restart"`
+			Replicas int      `bson:"replicas"`
+		} `yaml:"processes" bson:"processSpecs"`
+	} `bson:"spec"`
 }
 
 func readConf(filename string) (*ProcessSwarm, error) {
