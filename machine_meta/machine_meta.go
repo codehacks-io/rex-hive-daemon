@@ -114,6 +114,8 @@ type MachineMeta struct {
 	AwsEc2Meta *AwsEc2IdentityDoc `bson:"awsEc2Meta,omitempty"`
 }
 
+// TODO: Get amount of ram, cpu and storage
+
 type AwsEc2IdentityDoc struct {
 	AccountId               string      `json:"accountId" bson:"accountId,omitempty"`
 	Architecture            string      `json:"architecture" bson:"architecture,omitempty"`
