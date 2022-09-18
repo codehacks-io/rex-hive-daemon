@@ -115,19 +115,19 @@ type MachineMeta struct {
 }
 
 type AwsEc2IdentityDoc struct {
-	AccountId               string      `json:"accountId"`
-	Architecture            string      `json:"architecture"`
-	AvailabilityZone        string      `json:"availabilityZone"`
-	BillingProducts         interface{} `json:"billingProducts"`
-	DevPayProductCodes      interface{} `json:"devpayProductCodes"`
-	MarketplaceProductCodes interface{} `json:"marketplaceProductCodes"`
-	ImageId                 string      `json:"imageId"`
-	InstanceId              string      `json:"instanceId"`
-	InstanceType            string      `json:"instanceType"`
-	KernelId                interface{} `json:"kernelId"`
-	PendingTime             time.Time   `json:"pendingTime"`
-	PrivateIp               string      `json:"privateIp"`
-	RamdiskId               interface{} `json:"ramdiskId"`
-	Region                  string      `json:"region"`
-	Version                 string      `json:"version"`
+	AccountId               string      `json:"accountId" bson:"accountId,omitempty"`
+	Architecture            string      `json:"architecture" bson:"architecture,omitempty"`
+	AvailabilityZone        string      `json:"availabilityZone" bson:"availabilityZone,omitempty"`
+	BillingProducts         interface{} `json:"billingProducts" bson:"billingProducts,omitempty"`
+	DevPayProductCodes      interface{} `json:"devpayProductCodes" bson:"devPayProductCodes,omitempty"` // The AWS's json field is 'devpayProductCodes', note the lowercase 'p' in 'pay'.
+	MarketplaceProductCodes interface{} `json:"marketplaceProductCodes" bson:"marketplaceProductCodes,omitempty"`
+	ImageId                 string      `json:"imageId" bson:"imageId,omitempty"`
+	InstanceId              string      `json:"instanceId" bson:"instanceId,omitempty"`
+	InstanceType            string      `json:"instanceType" bson:"instanceType,omitempty"`
+	KernelId                interface{} `json:"kernelId" bson:"kernelId,omitempty"`
+	PendingTime             time.Time   `json:"pendingTime" bson:"pendingTime,omitempty"`
+	PrivateIp               string      `json:"privateIp" bson:"privateIp,omitempty"`
+	RamdiskId               interface{} `json:"ramdiskId" bson:"ramdiskId,omitempty"`
+	Region                  string      `json:"region" bson:"region,omitempty"`
+	Version                 string      `json:"version" bson:"version,omitempty"`
 }
