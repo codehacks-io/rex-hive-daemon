@@ -23,6 +23,7 @@ import (
 const storeToDatabaseEverySeconds = 1
 const maxMessagesToStorePerRequest = 50
 const databaseTimeoutSeconds = 5
+const mongoDatabaseName = "swarm-chan"
 const mongoCollectionMessages = "m"
 
 var (
@@ -95,7 +96,7 @@ func insertMany(collection string, documents []interface{}) (*mongo.InsertManyRe
 	}()
 
 	// Get DB collection
-	coll := client.Database("swarm-chan").Collection(collection)
+	coll := client.Database(mongoDatabaseName).Collection(collection)
 	return coll.InsertMany(context.TODO(), documents)
 }
 
