@@ -57,28 +57,20 @@ func hearBeat() {
 	bulkStoreMessagesInMongo()
 }
 
-func connectDb() *mongo.Client {
+func connectDb() (*mongo.Client, error) {
 	// Get connection string
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
+		return nil, errors.New("no .env file found")
 	}
 	uri := os.Getenv("MONGODB_URI")
 	if uri == "" {
-		log.Println("You must set your 'MONGODB_URI' environmental variable. See\n\t https://www.mongodb.com/docs/drivers/go/current/usage-examples/#environment-variable")
+		return nil, errors.New("You must set your 'MONGODB_URI' environmental variable. See\n\t https://www.mongodb.com/docs/drivers/go/current/usage-examples/#environment-variable")
 	}
 
 	// Connect to database
 	t := databaseTimeoutSeconds * time.Second
 	opts := options.Client().ApplyURI(uri).SetTimeout(t).SetConnectTimeout(t).SetSocketTimeout(t).SetServerSelectionTimeout(t)
-	client, err := mongo.Connect(context.TODO(), opts)
-
-	// Handle connection error
-	if err != nil {
-		log.Println(err)
-		return nil
-	}
-
-	return client
+	return mongo.Connect(context.TODO(), opts)
 }
 
 func min(a int, b int) int {
@@ -90,9 +82,9 @@ func min(a int, b int) int {
 
 func insertMany(collection string, documents []interface{}) (*mongo.InsertManyResult, error) {
 	// Get DB connection
-	client := connectDb()
-	if client == nil {
-		return nil, errors.New("cannot connect to DB")
+	client, err := connectDb()
+	if err != nil {
+		return nil, err
 	}
 
 	// Disconnect from DB on exit
