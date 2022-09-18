@@ -3,6 +3,7 @@ package message_handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -12,6 +13,7 @@ import (
 	"log"
 	"os"
 	"rex-daemon/machine_meta"
+	"rex-daemon/process_swarm"
 	"rex-daemon/rexprint"
 	"rex-daemon/swarm_message"
 	"sync"
@@ -21,6 +23,7 @@ import (
 const storeToDatabaseEverySeconds = 1
 const maxMessagesToStorePerRequest = 50
 const databaseTimeoutSeconds = 5
+const mongoCollectionMessages = "m"
 
 var (
 	holdingMessages = map[string]*swarm_message.SwarmMessage{}
@@ -85,21 +88,11 @@ func min(a int, b int) int {
 	return b
 }
 
-func bulkStoreMessagesInMongo() {
-	// If no holding messages, there's nothing to store
-	if len(holdingMessages) <= 0 {
-		fmt.Println(rexprint.Dim("Holding zero messages, skipping save"))
-		if flushChan != nil {
-			*flushChan <- true
-			flushChan = nil
-		}
-		return
-	}
-
+func insertMany(collection string, documents []interface{}) (*mongo.InsertManyResult, error) {
 	// Get DB connection
 	client := connectDb()
 	if client == nil {
-		return
+		return nil, errors.New("cannot connect to DB")
 	}
 
 	// Disconnect from DB on exit
@@ -110,7 +103,20 @@ func bulkStoreMessagesInMongo() {
 	}()
 
 	// Get DB collection
-	coll := client.Database("swarm-chan").Collection("m")
+	coll := client.Database("swarm-chan").Collection(collection)
+	return coll.InsertMany(context.TODO(), documents)
+}
+
+func bulkStoreMessagesInMongo() {
+	// If no holding messages, there's nothing to store
+	if len(holdingMessages) <= 0 {
+		fmt.Println(rexprint.Dim("Holding zero messages, skipping save"))
+		if flushChan != nil {
+			*flushChan <- true
+			flushChan = nil
+		}
+		return
+	}
 
 	// Get array of message IDs to store. Using mutex lock to make it goroutine-safe.
 	lockForWriting.Lock()
@@ -123,9 +129,6 @@ func bulkStoreMessagesInMongo() {
 	for k, v := range holdingMessages {
 		writingMessages[i] = k
 		// Add machine meta right before sending it to DB
-		// NOTE: We're not attaching machine meta when message is received because machine meta might not be
-		// fully initialized yet. However, when the heartbeat for saving logs to DB start, it's guaranteed
-		// that the machine meta has been fully initialized.
 		v.Machine = machineMeta
 		i++
 		if i >= toWriteLength {
@@ -144,7 +147,7 @@ func bulkStoreMessagesInMongo() {
 	lockForHolding.Unlock()
 
 	// Insert data in MongoDB
-	_, err := coll.InsertMany(context.TODO(), docs)
+	_, err := insertMany(mongoCollectionMessages, docs)
 
 	if err != nil {
 		// Reset the writing array, even if data fails to be stored in DB
