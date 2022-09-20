@@ -1,4 +1,4 @@
-package swarm_message
+package hive_message
 
 import (
 	"rex-hive-daemon/machine_meta"

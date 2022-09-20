@@ -1,6 +1,6 @@
-kind: ProcessSwarm
+kind: HiveSpec
 metadata:
-  name: rex-swarm-test
+  name: hive-spec-demo
 secretGenerator:
   - envs:
       - .app-secrets/api.env

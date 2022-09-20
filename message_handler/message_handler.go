@@ -12,10 +12,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"os"
+	"rex-hive-daemon/hive_message"
+	"rex-hive-daemon/hive_spec"
 	"rex-hive-daemon/machine_meta"
-	"rex-hive-daemon/process_swarm"
 	"rex-hive-daemon/rexprint"
-	"rex-hive-daemon/swarm_message"
 	"sync"
 	"time"
 )
@@ -23,12 +23,12 @@ import (
 const storeToDatabaseEverySeconds = 1
 const maxMessagesToStorePerRequest = 50
 const databaseTimeoutSeconds = 5
-const mongoDatabaseName = "swarm-chan"
-const mongoCollectionMessages = "m"
-const mongoCollectionSpecs = "s"
+const mongoDatabaseName = "rex-hive"
+const mongoCollectionHiveMessage = "message"
+const mongoCollectionHiveRun = "run"
 
 var (
-	holdingMessages = map[string]*swarm_message.HiveMessage{}
+	holdingMessages = map[string]*hive_message.HiveMessage{}
 	writingMessages []string
 	lockForHolding  sync.Mutex
 	lockForWriting  sync.Mutex
@@ -39,7 +39,7 @@ var (
 	hiveRunId interface{}
 )
 
-func Run(swarmSpec *process_swarm.HiveSpec) {
+func Run(hiveSpec *hive_spec.HiveSpec) {
 	if didStartup {
 		return
 	}
@@ -47,13 +47,13 @@ func Run(swarmSpec *process_swarm.HiveSpec) {
 
 	// Get machine metadata
 	machineMeta = machine_meta.GetMachineMeta()
-	swarmSpec.RuntimeMachine = machineMeta
-	insertResult, err := insertOne(mongoCollectionSpecs, swarmSpec)
+	hiveSpec.RuntimeMachine = machineMeta
+	insertResult, err := insertOne(mongoCollectionHiveRun, hiveSpec)
 	if err != nil {
-		fmt.Println("cannot insert swarm spec in mongodb", rexprint.ErrColor(err.Error()))
+		fmt.Println("cannot insert hive run in mongodb", rexprint.ErrColor(err.Error()))
 	} else {
 		hiveRunId = insertResult.InsertedID
-		fmt.Println(rexprint.OutColor(fmt.Sprintf("swarm spec id inserted as %s", hiveRunId)))
+		fmt.Println(rexprint.OutColor(fmt.Sprintf("hive run inserted with ID %s", hiveRunId)))
 	}
 
 	for {
@@ -172,7 +172,7 @@ func bulkStoreMessagesInMongo() {
 	lockForHolding.Unlock()
 
 	// Insert data in MongoDB
-	_, err := insertMany(mongoCollectionMessages, docs)
+	_, err := insertMany(mongoCollectionHiveMessage, docs)
 
 	if err != nil {
 		// Reset the writing array, even if data fails to be stored in DB
@@ -247,7 +247,7 @@ func testMongo() {
 	fmt.Printf("%s\n", jsonData)
 }
 
-func OnHiveMessage(message *swarm_message.HiveMessage) {
+func OnHiveMessage(message *hive_message.HiveMessage) {
 	lockForHolding.Lock()
 	message.Time = time.Now()
 	idd, _ := uuid.NewRandom()

@@ -1,4 +1,4 @@
-package process_swarm
+package hive_spec
 
 import (
 	"gopkg.in/yaml.v3"
