@@ -16,6 +16,7 @@ const (
 )
 
 type HiveMessage struct {
+	Id             string                    `bson:"_id"`
 	Index          int                       `bson:"index"`
 	Pid            int                       `bson:"pid"`
 	Attempt        int                       `bson:"attempt"`

@@ -28,7 +28,7 @@ const mongoCollectionHiveMessage = "message"
 const mongoCollectionHiveRun = "run"
 
 var (
-	holdingMessages = map[string]*hive_message.HiveMessage{}
+	holdingMessages []*hive_message.HiveMessage
 	writingMessages []string
 	lockForHolding  sync.Mutex
 	lockForWriting  sync.Mutex
@@ -132,6 +132,21 @@ func insertMany(collection string, documents []interface{}) (*mongo.InsertManyRe
 	return coll.InsertMany(context.TODO(), documents)
 }
 
+// FindIndex returns the first index satisfying the given function, or -1 if none do.
+func FindIndex[E any](slice *[]E, fn func(E) bool) int {
+	for i, v := range *slice {
+		if fn(v) {
+			return i
+		}
+	}
+	return -1
+}
+
+// RemoveAtIndex returns a slice without the element at the given index.
+func RemoveAtIndex[E any](slice *[]E, index int) []E {
+	return append((*slice)[:index], (*slice)[index+1:]...)
+}
+
 func bulkStoreMessagesInMongo() {
 	// If no holding messages, there's nothing to store
 	if len(holdingMessages) <= 0 {
@@ -150,23 +165,17 @@ func bulkStoreMessagesInMongo() {
 	toWriteLength := min(holdingMessagesLength, maxMessagesToStorePerRequest)
 	fmt.Println(rexprint.Dim(fmt.Sprintf("Will store %d messages. Holding: %d, Max: %d", toWriteLength, holdingMessagesLength, maxMessagesToStorePerRequest)))
 	writingMessages = make([]string, toWriteLength)
-	i := 0
-	for k, v := range holdingMessages {
-		writingMessages[i] = k
+	docs := make([]interface{}, toWriteLength) // Prepare data to write into MongoDB
+	for i, v := range holdingMessages {
+		writingMessages[i] = v.Id
 		// Add machine meta right before sending it to DB
 		v.RuntimeMachine = machineMeta
 		v.HiveRunId = hiveRunId
+		docs[i] = v
 		i++
 		if i >= toWriteLength {
 			break
 		}
-	}
-
-	// Prepare data to write into MongoDB
-	docs := make([]interface{}, len(writingMessages))
-	for index, key := range writingMessages {
-		docs[index] = holdingMessages[key]
-		i++
 	}
 
 	// IMPORTANT: Unlock the 'holding' map before trying to write to DB since that op could take a few seconds.
@@ -184,8 +193,12 @@ func bulkStoreMessagesInMongo() {
 		// Remove the stored messages from temp holding map. Using its own mutex to manipulate the map.
 		lockForHolding.Lock()
 		beforeStoreSize := len(holdingMessages)
+
 		for _, k := range writingMessages {
-			delete(holdingMessages, k)
+			indexToRemove := FindIndex(&holdingMessages, func(x *hive_message.HiveMessage) bool { return x.Id == k })
+			if indexToRemove != -1 {
+				holdingMessages = RemoveAtIndex(&holdingMessages, indexToRemove)
+			}
 		}
 		fmt.Println(rexprint.Dim(fmt.Sprintf("Stored %d messages. Held before: %d, hold now: %d", len(writingMessages), beforeStoreSize, len(holdingMessages))))
 		lockForHolding.Unlock()
@@ -250,8 +263,9 @@ func testMongo() {
 
 func OnHiveMessage(message *hive_message.HiveMessage) {
 	lockForHolding.Lock()
+	message.Id = genHiveMessageId()
 	message.Time = time.Now()
-	holdingMessages[genHiveMessageId()] = message
+	holdingMessages = append(holdingMessages, message)
 	lockForHolding.Unlock()
 }
 
