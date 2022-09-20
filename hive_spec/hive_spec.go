@@ -14,7 +14,7 @@ type HiveSpec struct {
 		Name string `bson:"name"`
 	} `bson:"metadata"`
 	Spec struct {
-		ProcessSpecs []struct {
+		Processes []struct {
 			Name string `bson:"name"`
 			Env  []struct {
 				Name      string `bson:"name"`
@@ -29,7 +29,7 @@ type HiveSpec struct {
 			Cmd      []string `bson:"cmd"`
 			Restart  string   `bson:"restart"`
 			Replicas int      `bson:"replicas"`
-		} `yaml:"processes" bson:"processSpecs"`
+		} `yaml:"processes" bson:"processes"`
 	} `bson:"spec"`
 	// This field os not populated by the yml spec but at run time
 	RuntimeMachine *machine_meta.MachineMeta `bson:"runtimeMachine,omitempty"`

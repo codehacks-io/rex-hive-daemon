@@ -39,7 +39,7 @@ func main() {
 
 func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
 
-	if len((*hiveSpec).Spec.ProcessSpecs) < 1 {
+	if len((*hiveSpec).Spec.Processes) < 1 {
 		fmt.Println("No process specs to run")
 		return
 	}
@@ -48,7 +48,7 @@ func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
 	count := 0
 
 	// Before running any process, validate that we can get all the dynamic args
-	for _, s := range hiveSpec.Spec.ProcessSpecs {
+	for _, s := range hiveSpec.Spec.Processes {
 		for rep := 0; rep < s.Replicas; rep++ {
 			// This line will panic if we cannot get all the dynamic args
 			args := s.Cmd[1:]
@@ -57,7 +57,7 @@ func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
 		}
 	}
 	usedNumsInSequence = map[int]bool{} // Reset map of used nums after validation
-	fmt.Println(fmt.Sprintf("Process specs: %d, total processes: %d", len((*hiveSpec).Spec.ProcessSpecs), count))
+	fmt.Println(fmt.Sprintf("Process specs: %d, total processes: %d", len((*hiveSpec).Spec.Processes), count))
 	count = 0 // Also reset count
 	// End of validations
 
@@ -67,7 +67,7 @@ func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
 		// Spawn processes in spec
 		var wg sync.WaitGroup
 		colors := p.GetRandomColors()
-		for _, s := range hiveSpec.Spec.ProcessSpecs {
+		for _, s := range hiveSpec.Spec.Processes {
 			for rep := 0; rep < s.Replicas; rep++ {
 				wg.Add(1)
 				args := s.Cmd[1:]
