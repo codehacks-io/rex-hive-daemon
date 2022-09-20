@@ -19,7 +19,7 @@ import (
 )
 
 const storeToDatabaseEverySeconds = 1
-const maxMessagesToStorePerRequest = 50
+const maxMessagesToStorePerRequest = 200
 const databaseTimeoutSeconds = 5
 const mongoDatabaseName = "rex-hive"
 const mongoCollectionHiveMessage = "message"
