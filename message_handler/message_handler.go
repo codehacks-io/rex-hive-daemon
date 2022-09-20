@@ -8,7 +8,6 @@ import (
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
 	"os"
 	"rex-hive-daemon/hive_message"
 	"rex-hive-daemon/hive_spec"
@@ -185,13 +184,12 @@ func bulkStoreMessagesInMongo() {
 
 	if err != nil {
 		// Reset the writing array, even if data fails to be stored in DB
+		fmt.Println(rexprint.ErrColor(fmt.Sprintf("Error sotring %d messages. Held before: %d, hold now: %d. Error: %s", toWriteLength, holdingMessagesLength, len(holdingMessages), err)))
 		writingMessages = []string{}
 		lockForWriting.Unlock() // Unlock writing array even if DB storing fails
-		log.Println(err)
 	} else {
 		// Remove the stored messages from temp holding map. Using its own mutex to manipulate the map.
 		lockForHolding.Lock()
-		beforeStoreSize := len(holdingMessages)
 
 		for _, k := range writingMessages {
 			indexToRemove := FindIndex(&holdingMessages, func(x *hive_message.HiveMessage) bool { return x.Id == k })
@@ -199,7 +197,7 @@ func bulkStoreMessagesInMongo() {
 				holdingMessages = RemoveAtIndex(&holdingMessages, indexToRemove)
 			}
 		}
-		fmt.Println(rexprint.Dim(fmt.Sprintf("Stored %d messages. Held before: %d, hold now: %d", len(writingMessages), beforeStoreSize, len(holdingMessages))))
+		fmt.Println(rexprint.Dim(fmt.Sprintf("Stored %d messages. Held before: %d, hold now: %d", toWriteLength, holdingMessagesLength, len(holdingMessages))))
 		lockForHolding.Unlock()
 
 		// Reset the writing array, as data has been written to DB
