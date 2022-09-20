@@ -48,6 +48,7 @@ func Run(hiveSpec *hive_spec.HiveSpec) {
 	// Get machine metadata
 	machineMeta = machine_meta.GetMachineMeta()
 	hiveSpec.RuntimeMachine = machineMeta
+	hiveSpec.Id = genHiveRunId()
 	insertResult, err := insertOne(mongoCollectionHiveRun, hiveSpec)
 	if err != nil {
 		fmt.Println("cannot insert hive run in mongodb", rexprint.ErrColor(err.Error()))
@@ -250,7 +251,16 @@ func testMongo() {
 func OnHiveMessage(message *hive_message.HiveMessage) {
 	lockForHolding.Lock()
 	message.Time = time.Now()
-	idd, _ := uuid.NewRandom()
-	holdingMessages[idd.String()] = message
+	holdingMessages[genHiveMessageId()] = message
 	lockForHolding.Unlock()
+}
+
+func genHiveRunId() string {
+	id, _ := uuid.NewRandom()
+	return id.String()
+}
+
+func genHiveMessageId() string {
+	id, _ := uuid.NewRandom()
+	return id.String()
 }
