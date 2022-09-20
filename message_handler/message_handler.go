@@ -12,10 +12,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"os"
-	"rex-swarm-daemon/machine_meta"
-	"rex-swarm-daemon/process_swarm"
-	"rex-swarm-daemon/rexprint"
-	"rex-swarm-daemon/swarm_message"
+	"rex-hive-daemon/machine_meta"
+	"rex-hive-daemon/process_swarm"
+	"rex-hive-daemon/rexprint"
+	"rex-hive-daemon/swarm_message"
 	"sync"
 	"time"
 )
@@ -28,18 +28,18 @@ const mongoCollectionMessages = "m"
 const mongoCollectionSpecs = "s"
 
 var (
-	holdingMessages = map[string]*swarm_message.SwarmMessage{}
+	holdingMessages = map[string]*swarm_message.HiveMessage{}
 	writingMessages []string
 	lockForHolding  sync.Mutex
 	lockForWriting  sync.Mutex
 	didStartup      = false
 	machineMeta     = &machine_meta.MachineMeta{}
 	// Channels helps to block execution while there are still pending messages to store in DB
-	flushChan   *chan bool
-	swarmSpecId interface{}
+	flushChan *chan bool
+	hiveRunId interface{}
 )
 
-func Run(swarmSpec *process_swarm.ProcessSwarm) {
+func Run(swarmSpec *process_swarm.HiveSpec) {
 	if didStartup {
 		return
 	}
@@ -52,8 +52,8 @@ func Run(swarmSpec *process_swarm.ProcessSwarm) {
 	if err != nil {
 		fmt.Println("cannot insert swarm spec in mongodb", rexprint.ErrColor(err.Error()))
 	} else {
-		swarmSpecId = insertResult.InsertedID
-		fmt.Println(rexprint.OutColor(fmt.Sprintf("swarm spec id inserted as %s", swarmSpecId)))
+		hiveRunId = insertResult.InsertedID
+		fmt.Println(rexprint.OutColor(fmt.Sprintf("swarm spec id inserted as %s", hiveRunId)))
 	}
 
 	for {
@@ -154,7 +154,7 @@ func bulkStoreMessagesInMongo() {
 		writingMessages[i] = k
 		// Add machine meta right before sending it to DB
 		v.RuntimeMachine = machineMeta
-		v.SwarmSpecId = swarmSpecId
+		v.HiveRunId = hiveRunId
 		i++
 		if i >= toWriteLength {
 			break
@@ -247,7 +247,7 @@ func testMongo() {
 	fmt.Printf("%s\n", jsonData)
 }
 
-func ProcessSwarmMessage(message *swarm_message.SwarmMessage) {
+func OnHiveMessage(message *swarm_message.HiveMessage) {
 	lockForHolding.Lock()
 	message.Time = time.Now()
 	idd, _ := uuid.NewRandom()

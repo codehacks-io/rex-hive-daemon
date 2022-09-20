@@ -1,28 +1,28 @@
 package swarm_message
 
 import (
-	"rex-swarm-daemon/machine_meta"
+	"rex-hive-daemon/machine_meta"
 	"time"
 )
 
-type swarmMessageType string
+type hiveMessageType string
 
 const (
-	ProcessAborted swarmMessageType = "aborted"
-	ProcessStarted swarmMessageType = "started"
-	ProcessExited  swarmMessageType = "exited"
-	ProcessStdOut  swarmMessageType = "stdout"
-	ProcessStdErr  swarmMessageType = "stderr"
+	ProcessAborted hiveMessageType = "aborted"
+	ProcessStarted hiveMessageType = "started"
+	ProcessExited  hiveMessageType = "exited"
+	ProcessStdOut  hiveMessageType = "stdout"
+	ProcessStdErr  hiveMessageType = "stderr"
 )
 
-type SwarmMessage struct {
+type HiveMessage struct {
 	Index          int                       `bson:"index"`
 	Pid            int                       `bson:"pid"`
 	Attempt        int                       `bson:"attempt"`
-	Type           swarmMessageType          `bson:"type"`
+	Type           hiveMessageType           `bson:"type"`
 	Data           string                    `bson:"data,omitempty"`
 	ExitCode       int                       `bson:"exitCode"`
-	SwarmSpecId    interface{}               `bson:"swarmSpecId"`
+	HiveRunId      interface{}               `bson:"hiveRunId"`
 	RuntimeMachine *machine_meta.MachineMeta `bson:"runtimeMachine,omitempty"`
 	Time           time.Time                 `bson:"time"`
 }

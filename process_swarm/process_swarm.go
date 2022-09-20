@@ -3,10 +3,12 @@ package process_swarm
 import (
 	"gopkg.in/yaml.v3"
 	"os"
-	"rex-swarm-daemon/machine_meta"
+	"rex-hive-daemon/machine_meta"
 )
 
-type ProcessSwarm struct {
+// HiveSpec is the formal definition of how one or multiple processes will run in a machine. Once a HiveSpec is executed
+// the group of processes that are running is called a "HiveRun". A HiveRun is assigned an ID once registered in DB.
+type HiveSpec struct {
 	Kind     string `bson:"kind"`
 	Metadata struct {
 		Name string `bson:"name"`
@@ -33,7 +35,7 @@ type ProcessSwarm struct {
 	RuntimeMachine *machine_meta.MachineMeta `bson:"runtimeMachine,omitempty"`
 }
 
-func FromFile(filename string) (*ProcessSwarm, error) {
+func FromFile(filename string) (*HiveSpec, error) {
 
 	// Read file
 	buff, err := os.ReadFile(filename)
@@ -42,7 +44,7 @@ func FromFile(filename string) (*ProcessSwarm, error) {
 	}
 
 	// Parse data
-	data := &ProcessSwarm{}
+	data := &HiveSpec{}
 	err = yaml.Unmarshal(buff, data)
 
 	if err != nil {
