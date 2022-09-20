@@ -4,13 +4,15 @@ import (
 	"gopkg.in/yaml.v3"
 	"os"
 	"rex-hive-daemon/machine_meta"
+	"time"
 )
 
 // HiveSpec is the formal definition of how one or multiple processes will run in a machine. Once a HiveSpec is executed
 // the group of processes that are running is called a "HiveRun". A HiveRun is assigned an ID once registered in DB.
 type HiveSpec struct {
-	Id       string `bson:"_id"`
-	Kind     string `bson:"kind"`
+	Id       string    `bson:"_id"`
+	Time     time.Time `bson:"time"`
+	Kind     string    `bson:"kind"`
 	Metadata struct {
 		Name string `bson:"name"`
 	} `bson:"metadata"`

@@ -49,6 +49,7 @@ func Run(hiveSpec *hive_spec.HiveSpec) {
 	machineMeta = machine_meta.GetMachineMeta()
 	hiveSpec.RuntimeMachine = machineMeta
 	hiveSpec.Id = genHiveRunId()
+	hiveSpec.Time = time.Now()
 	insertResult, err := insertOne(mongoCollectionHiveRun, hiveSpec)
 	if err != nil {
 		fmt.Println("cannot insert hive run in mongodb", rexprint.ErrColor(err.Error()))
