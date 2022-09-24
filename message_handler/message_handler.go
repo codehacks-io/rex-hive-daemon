@@ -165,7 +165,7 @@ func bulkStoreMessagesInMongo() {
 	writingMessages = make([]string, toWriteLength)
 	docs := make([]interface{}, toWriteLength) // Prepare data to write into MongoDB
 	for i, v := range holdingMessages {
-		writingMessages[i] = v.Id
+		writingMessages[i] = v.TempId
 		// Add machine meta right before sending it to DB
 		v.RuntimeMachine = machineMeta
 		v.HiveRunId = hiveRunId
@@ -192,7 +192,7 @@ func bulkStoreMessagesInMongo() {
 		lockForHolding.Lock()
 
 		for _, k := range writingMessages {
-			indexToRemove := FindIndex(&holdingMessages, func(x *hive_message.HiveMessage) bool { return x.Id == k })
+			indexToRemove := FindIndex(&holdingMessages, func(x *hive_message.HiveMessage) bool { return x.TempId == k })
 			if indexToRemove != -1 {
 				holdingMessages = RemoveAtIndex(&holdingMessages, indexToRemove)
 			}
@@ -222,7 +222,7 @@ func bulkStoreMessagesInMongo() {
 
 func OnHiveMessage(message *hive_message.HiveMessage) {
 	lockForHolding.Lock()
-	message.Id = genHiveMessageId()
+	message.TempId = genHiveMessageId()
 	message.Time = time.Now()
 	holdingMessages = append(holdingMessages, message)
 	lockForHolding.Unlock()
