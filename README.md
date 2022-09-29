@@ -45,7 +45,7 @@ stderr channels of each process to ease debugging of multiplayer game deployment
 Run mongo db with Docker:
 
 ```shell
-docker run --name mongodb -d -v ./my_mongo_data/:/data/db -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=rex-hive -e MONGO_INITDB_ROOT_PASSWORD=unsafe-password-NEVER-use-in-prod-1909 mongo:5.0.12
+docker run --name mongodb -d -v /Users/<your-user-name>/Documents/docker-volumes/mongo.v/:/data/db/ -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=rex-hive -e MONGO_INITDB_ROOT_PASSWORD=unsafe-password-NEVER-use-in-prod-1909 mongo:6.0.1
 ```
 
 Run example spec:
