@@ -17,13 +17,13 @@ int main(const int argc, const char *argv[]) {
         std::basic_ostream<char> *channel = secondsToSleep < 0 ? &std::cerr : &std::cout;
 
         // Before sleep message
-        *channel << i << " of " << total << ": will sleep for" << secondsToSleep << std::endl;
+        *channel << i << " of " << total << ": will sleep for " << secondsToSleep << " seconds..." << std::endl;
 
         // Sleep
         std::this_thread::sleep_for(std::chrono::seconds(std::abs(secondsToSleep)));
 
         // After sleep message
-        *channel << i << " of " << total << ": did sleep for" << secondsToSleep << std::endl;
+        *channel << i << " of " << total << ": did sleep for " << secondsToSleep << " seconds" << std::endl;
     }
 
     std::cout << "Good bye from C++" << std::endl;
