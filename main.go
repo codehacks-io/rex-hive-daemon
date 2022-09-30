@@ -81,7 +81,7 @@ func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
 	}()
 
 	for c := range hiveChan {
-		go message_handler.OnHiveMessage(c)
+		message_handler.OnHiveMessage(c)
 	}
 }
 
