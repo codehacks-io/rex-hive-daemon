@@ -178,10 +178,7 @@ func bulkStoreMessagesInMongo() {
 		lockForHolding.Lock()
 
 		for _, k := range writingMessages {
-			indexToRemove := slice_tools.FindIndex(&holdingMessages, func(x *hive_message.HiveMessage) bool { return x.TempId == k })
-			if indexToRemove != -1 {
-				holdingMessages = slice_tools.RemoveAtIndex(&holdingMessages, indexToRemove)
-			}
+			holdingMessages = *slice_tools.RemoveFirst(&holdingMessages, func(x *hive_message.HiveMessage) bool { return x.TempId == k })
 		}
 		fmt.Println(rexprint.Dim(fmt.Sprintf("Stored %d messages. Held before: %d, hold now: %d", toWriteLength, holdingMessagesLength, len(holdingMessages))))
 		lockForHolding.Unlock()

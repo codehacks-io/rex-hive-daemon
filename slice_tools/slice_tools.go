@@ -14,3 +14,12 @@ func FindIndex[E any](slice *[]E, fn func(E) bool) int {
 func RemoveAtIndex[E any](slice *[]E, index int) []E {
 	return append((*slice)[:index], (*slice)[index+1:]...)
 }
+
+func RemoveFirst[E any](slice *[]E, fn func(E) bool) *[]E {
+	indexToRemove := FindIndex(slice, fn)
+	if indexToRemove != -1 {
+		newSlice := RemoveAtIndex(slice, indexToRemove)
+		return &newSlice
+	}
+	return slice
+}
