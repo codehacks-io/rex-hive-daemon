@@ -27,7 +27,7 @@ func main() {
 		}
 
 		// Message before sleep
-		msgBefore := fmt.Sprintf("%d of %d: will sleep for %d seconds...", i, total, n)
+		msgBefore := fmt.Sprintf("%d of %d: will sleep for %d seconds...", i+1, total, n)
 		if n < 0 {
 			_, _ = fmt.Fprintln(os.Stderr, msgBefore)
 		} else {
@@ -37,7 +37,7 @@ func main() {
 		time.Sleep(time.Duration(secondsToSleep) * time.Second)
 
 		// Message after sleep
-		msgAfter := fmt.Sprintf("%d of %d: did sleep for %d seconds", i, total, n)
+		msgAfter := fmt.Sprintf("%d of %d: did sleep for %d seconds", i+1, total, n)
 		if n < 0 {
 			_, _ = fmt.Fprintln(os.Stderr, msgAfter)
 		} else {
