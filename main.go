@@ -67,12 +67,12 @@ func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
 		// Spawn processes in spec
 		var wg sync.WaitGroup
 		colors := p.GetRandomColors()
-		for _, s := range hiveSpec.Spec.Processes {
-			for rep := 0; rep < s.Replicas; rep++ {
+		for _, processSpec := range hiveSpec.Spec.Processes {
+			for rep := 0; rep < processSpec.Replicas; rep++ {
 				wg.Add(1)
-				args := s.Cmd[1:]
+				args := processSpec.Cmd[1:]
 				replacedArgs := getDynamicArgsOrPanic(&args, &usedNumsInSequence)
-				go runCommandAndKeepAlive(&hiveChan, count, &wg, colors, stringToRestartPolicy[s.Restart], s.Cmd[0], replacedArgs...)
+				go runCommandAndKeepAlive(&hiveChan, count, &wg, colors, stringToRestartPolicy[processSpec.Restart], processSpec.Cmd[0], replacedArgs...)
 				count++
 			}
 		}
