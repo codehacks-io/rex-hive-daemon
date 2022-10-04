@@ -4,18 +4,37 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"os"
 	"os/exec"
+	"os/signal"
 	"rex-hive-daemon/backoff"
 	"rex-hive-daemon/hive_message"
 	"rex-hive-daemon/hive_spec"
 	"rex-hive-daemon/message_handler"
 	"sync"
+	"syscall"
 	"time"
 )
 import p "rex-hive-daemon/rexprint"
 
+var (
+	tearingDown = false
+)
+
+func listenForTermination() {
+	sigsChan := make(chan os.Signal, 1)
+	signal.Notify(sigsChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigsChan
+		fmt.Println("Just received a signal:", sig, "will wait to flush before exiting")
+		tearingDown = true
+	}()
+}
+
 // Eg. Run with: `go run .\main.go --file=./demo-specs/test-spec.yml`
 func main() {
+	listenForTermination()
+
 	// Define cli params
 	filePathPtr := flag.String("file", "", "spec file containing args")
 	flag.Parse()
@@ -106,6 +125,11 @@ func runCommandAndKeepAlive(hiveChan *chan *hive_message.HiveMessage, i int, gro
 		// If the command never stops, the following line will block until command execution terminates
 		id, exitCode := runCommand(hiveChan, i, runCount, colors, processSpec, args...)
 
+		if tearingDown {
+			p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("tearing down, wont re-run ANY process")))
+			return
+		}
+
 		// Get elapsed runtime of command
 		elapsed := time.Since(startedAt)
 
@@ -149,6 +173,12 @@ const invalidPid = -1
 const noExitCode = -1
 
 func runCommand(hiveChan *chan *hive_message.HiveMessage, i int, attempt int, colors []int, processSpec *hive_spec.ProcessSpec, args ...string) (name string, pid int) {
+	preSpawnId := fmt.Sprintf("%d:%d:%d", i, invalidPid, attempt)
+
+	if tearingDown {
+		p.PrintLnColor(preSpawnId, colors, i, p.Dim(fmt.Sprintf("tearing down, skipping process")))
+		return preSpawnId, invalidPid
+	}
 
 	// Execute command
 	cmd := exec.Command(processSpec.Cmd[0], args...)
@@ -160,7 +190,6 @@ func runCommand(hiveChan *chan *hive_message.HiveMessage, i int, attempt int, co
 	cmdSummary := fmt.Sprintf("'%s', args: %s, restart: %s", processSpec.Cmd[0], args, processSpec.Restart)
 
 	func() {
-		preSpawnId := fmt.Sprintf("%d:%d:%d", i, invalidPid, attempt)
 		if len(processSpec.Env) <= 0 {
 			p.PrintLnColor(preSpawnId, colors, i, p.Dim("process spec has no env vars"))
 		}
@@ -176,8 +205,7 @@ func runCommand(hiveChan *chan *hive_message.HiveMessage, i int, attempt int, co
 
 	// Start command
 	if err = cmd.Start(); err != nil {
-		noPidId := fmt.Sprintf("%d:%d:%d", i, invalidPid, attempt)
-		p.PrintLnColor(noPidId, colors, i, p.ErrColor(fmt.Sprintf("cannot start %s: %s", cmdSummary, err.Error())))
+		p.PrintLnColor(preSpawnId, colors, i, p.ErrColor(fmt.Sprintf("cannot start %s: %s", cmdSummary, err.Error())))
 		*hiveChan <- &hive_message.HiveMessage{
 			Index:    i,
 			Pid:      invalidPid,
@@ -186,7 +214,7 @@ func runCommand(hiveChan *chan *hive_message.HiveMessage, i int, attempt int, co
 			Data:     err.Error(),
 			ExitCode: noExitCode,
 		}
-		return noPidId, invalidPid
+		return preSpawnId, invalidPid
 	}
 
 	// At this point we've got a PID for the process
