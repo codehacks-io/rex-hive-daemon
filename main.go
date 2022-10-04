@@ -72,7 +72,7 @@ func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
 				wg.Add(1)
 				args := processSpec.Cmd[1:]
 				replacedArgs := getDynamicArgsOrPanic(&args, &usedNumsInSequence)
-				go runCommandAndKeepAlive(&hiveChan, count, &wg, colors, stringToRestartPolicy[processSpec.Restart], processSpec.Cmd[0], replacedArgs...)
+				go runCommandAndKeepAlive(&hiveChan, count, &wg, colors, processSpec, replacedArgs...)
 				count++
 			}
 		}
@@ -85,7 +85,9 @@ func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
 	}
 }
 
-func runCommandAndKeepAlive(hiveChan *chan *hive_message.HiveMessage, i int, group *sync.WaitGroup, colors []int, restartPolicy RestartPolicy, command string, args ...string) {
+func runCommandAndKeepAlive(hiveChan *chan *hive_message.HiveMessage, i int, group *sync.WaitGroup, colors []int, processSpec *hive_spec.ProcessSpec, args ...string) {
+	restartPolicy := stringToRestartPolicy[processSpec.Restart]
+
 	// Sync with wait group
 	defer group.Done()
 
@@ -102,7 +104,7 @@ func runCommandAndKeepAlive(hiveChan *chan *hive_message.HiveMessage, i int, gro
 		startedAt := time.Now()
 
 		// If the command never stops, the following line will block until command execution terminates
-		id, exitCode := runCommand(hiveChan, i, restartPolicy, runCount, colors, command, args...)
+		id, exitCode := runCommand(hiveChan, i, runCount, colors, processSpec, args...)
 
 		// Get elapsed runtime of command
 		elapsed := time.Since(startedAt)
@@ -146,16 +148,31 @@ func runCommandAndKeepAlive(hiveChan *chan *hive_message.HiveMessage, i int, gro
 const invalidPid = -1
 const noExitCode = -1
 
-func runCommand(hiveChan *chan *hive_message.HiveMessage, i int, restart RestartPolicy, attempt int, colors []int, command string, args ...string) (name string, pid int) {
+func runCommand(hiveChan *chan *hive_message.HiveMessage, i int, attempt int, colors []int, processSpec *hive_spec.ProcessSpec, args ...string) (name string, pid int) {
 
 	// Execute command
-	cmd := exec.Command(command, args...)
+	cmd := exec.Command(processSpec.Cmd[0], args...)
 
 	// Get command out pipes
 	stdout, err := cmd.StdoutPipe()
 	stderr, err := cmd.StderrPipe()
 
-	cmdSummary := fmt.Sprintf("'%s', args: %s, restart: %s", command, args, restartPolicyToString[restart])
+	cmdSummary := fmt.Sprintf("'%s', args: %s, restart: %s", processSpec.Cmd[0], args, processSpec.Restart)
+
+	func() {
+		preSpawnId := fmt.Sprintf("%d:%d:%d", i, invalidPid, attempt)
+		if len(processSpec.Env) <= 0 {
+			p.PrintLnColor(preSpawnId, colors, i, p.Dim("process spec has no env vars"))
+		}
+
+		// Important: Uncomment next line if you are running a command like `go run ...` instead of a compiled binary, or it won't run
+		//cmd.Env = os.Environ()
+
+		for _, envEntry := range processSpec.Env {
+			p.PrintLnColor(preSpawnId, colors, i, p.Dim(fmt.Sprintf("setting env %s=%s", envEntry.Name, envEntry.Value)))
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", envEntry.Name, envEntry.Value))
+		}
+	}()
 
 	// Start command
 	if err = cmd.Start(); err != nil {

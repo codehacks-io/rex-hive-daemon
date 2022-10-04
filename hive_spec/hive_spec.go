@@ -7,6 +7,23 @@ import (
 	"time"
 )
 
+type ProcessSpec struct {
+	Name string `bson:"name"`
+	Env  []struct {
+		Name      string `bson:"name"`
+		Value     string `bson:"value"`
+		ValueFrom struct {
+			SecretKeyRef struct {
+				Name string `bson:"name"`
+				Key  string `bson:"key"`
+			} `bson:"secretKeyRef"`
+		} `bson:"valueFrom"`
+	} `bson:"env"`
+	Cmd      []string `bson:"cmd"`
+	Restart  string   `bson:"restart"`
+	Replicas int      `bson:"replicas"`
+}
+
 // HiveSpec is the formal definition of how one or multiple processes will run in a machine. Once a HiveSpec is executed
 // the group of processes that are running is called a "HiveRun". A HiveRun is assigned an ID once registered in DB.
 type HiveSpec struct {
@@ -17,22 +34,7 @@ type HiveSpec struct {
 		Name string `bson:"name"`
 	} `bson:"metadata"`
 	Spec struct {
-		Processes []struct {
-			Name string `bson:"name"`
-			Env  []struct {
-				Name      string `bson:"name"`
-				Value     string `bson:"value"`
-				ValueFrom struct {
-					SecretKeyRef struct {
-						Name string `bson:"name"`
-						Key  string `bson:"key"`
-					} `bson:"secretKeyRef"`
-				} `bson:"valueFrom"`
-			} `bson:"env"`
-			Cmd      []string `bson:"cmd"`
-			Restart  string   `bson:"restart"`
-			Replicas int      `bson:"replicas"`
-		} `yaml:"processes" bson:"processes"`
+		Processes []*ProcessSpec `yaml:"processes" bson:"processes"`
 	} `bson:"spec"`
 	// This field os not populated by the yml spec but at run time
 	RuntimeMachine *machine_meta.MachineMeta `bson:"runtimeMachine,omitempty"`
