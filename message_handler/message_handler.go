@@ -13,6 +13,7 @@ import (
 	"rex-hive-daemon/hive_spec"
 	"rex-hive-daemon/machine_meta"
 	"rex-hive-daemon/rexprint"
+	"rex-hive-daemon/slice_tools"
 	"sync"
 	"time"
 )
@@ -130,21 +131,6 @@ func insertMany(collection string, documents []interface{}) (*mongo.InsertManyRe
 	return coll.InsertMany(context.TODO(), documents)
 }
 
-// FindIndex returns the first index satisfying the given function, or -1 if none do.
-func FindIndex[E any](slice *[]E, fn func(E) bool) int {
-	for i, v := range *slice {
-		if fn(v) {
-			return i
-		}
-	}
-	return -1
-}
-
-// RemoveAtIndex returns a slice without the element at the given index.
-func RemoveAtIndex[E any](slice *[]E, index int) []E {
-	return append((*slice)[:index], (*slice)[index+1:]...)
-}
-
 func bulkStoreMessagesInMongo() {
 	// If no holding messages, there's nothing to store
 	if len(holdingMessages) <= 0 {
@@ -192,9 +178,9 @@ func bulkStoreMessagesInMongo() {
 		lockForHolding.Lock()
 
 		for _, k := range writingMessages {
-			indexToRemove := FindIndex(&holdingMessages, func(x *hive_message.HiveMessage) bool { return x.TempId == k })
+			indexToRemove := slice_tools.FindIndex(&holdingMessages, func(x *hive_message.HiveMessage) bool { return x.TempId == k })
 			if indexToRemove != -1 {
-				holdingMessages = RemoveAtIndex(&holdingMessages, indexToRemove)
+				holdingMessages = slice_tools.RemoveAtIndex(&holdingMessages, indexToRemove)
 			}
 		}
 		fmt.Println(rexprint.Dim(fmt.Sprintf("Stored %d messages. Held before: %d, hold now: %d", toWriteLength, holdingMessagesLength, len(holdingMessages))))
