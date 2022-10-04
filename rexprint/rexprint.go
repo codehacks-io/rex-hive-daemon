@@ -3,7 +3,6 @@ package rexprint
 import (
 	"fmt"
 	"math/rand"
-	"time"
 )
 
 func printAllColors() {
@@ -34,7 +33,9 @@ func GetRandomColors() []int {
 	}
 
 	// Shuffle colors array
-	rand.Seed(time.Now().UnixNano())
+	//rand.Seed(time.Now().UnixNano())
+	// Prefer a constant color distribution for easier debugging
+	rand.Seed(3)
 	for i := range colors {
 		j := rand.Intn(i + 1)
 		colors[i], colors[j] = colors[j], colors[i]
