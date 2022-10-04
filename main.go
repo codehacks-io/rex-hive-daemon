@@ -18,8 +18,32 @@ import (
 import p "rex-hive-daemon/rexprint"
 
 var (
-	tearingDown = false
+	tearingDown     = false
+	runningCommands []*exec.Cmd
+	// Locks reads and writes to tearingDown and runningCommands.
+	killingLock sync.Mutex
 )
+
+func killAllProcesses() {
+	killingLock.Lock()
+	tearingDown = true
+	fmt.Println("Trying to kill", len(runningCommands), "processes")
+	for _, cmd := range runningCommands {
+		if cmd == nil || cmd.Process == nil {
+			fmt.Println("Command", cmd, "has a nil process, cannot be stopped or it's already stopped")
+			continue
+		}
+		if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
+			fmt.Println("Could not send SIGINT signal to process. Error:", err, "PID:", cmd.Process.Pid, cmd, "will try to kill it...")
+			if err = cmd.Process.Kill(); err != nil {
+				fmt.Println("Could not kill process. Error:", err, "PID:", cmd.Process.Pid, cmd)
+				continue
+			}
+		}
+		fmt.Println("process successfully killed", cmd.Process.Pid, cmd)
+	}
+	killingLock.Unlock()
+}
 
 func listenForTermination() {
 	sigsChan := make(chan os.Signal, 1)
@@ -27,7 +51,7 @@ func listenForTermination() {
 	go func() {
 		sig := <-sigsChan
 		fmt.Println("Just received a signal:", sig, "will wait to flush before exiting")
-		tearingDown = true
+		killAllProcesses()
 	}()
 }
 
@@ -125,10 +149,13 @@ func runCommandAndKeepAlive(hiveChan *chan *hive_message.HiveMessage, i int, gro
 		// If the command never stops, the following line will block until command execution terminates
 		id, exitCode := runCommand(hiveChan, i, runCount, colors, processSpec, args...)
 
+		killingLock.Lock()
 		if tearingDown {
 			p.PrintLnColor(id, colors, i, p.Dim(fmt.Sprintf("tearing down, wont re-run ANY process")))
+			killingLock.Unlock()
 			return
 		}
+		killingLock.Unlock()
 
 		// Get elapsed runtime of command
 		elapsed := time.Since(startedAt)
@@ -175,13 +202,17 @@ const noExitCode = -1
 func runCommand(hiveChan *chan *hive_message.HiveMessage, i int, attempt int, colors []int, processSpec *hive_spec.ProcessSpec, args ...string) (name string, pid int) {
 	preSpawnId := fmt.Sprintf("%d:%d:%d", i, invalidPid, attempt)
 
+	killingLock.Lock()
 	if tearingDown {
 		p.PrintLnColor(preSpawnId, colors, i, p.Dim(fmt.Sprintf("tearing down, skipping process")))
+		killingLock.Unlock()
 		return preSpawnId, invalidPid
 	}
 
 	// Execute command
 	cmd := exec.Command(processSpec.Cmd[0], args...)
+	runningCommands = append(runningCommands, cmd)
+	killingLock.Unlock()
 
 	// Get command out pipes
 	stdout, err := cmd.StdoutPipe()
