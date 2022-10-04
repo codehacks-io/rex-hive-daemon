@@ -11,6 +11,7 @@ import (
 	"rex-hive-daemon/hive_message"
 	"rex-hive-daemon/hive_spec"
 	"rex-hive-daemon/message_handler"
+	"rex-hive-daemon/slice_tools"
 	"sync"
 	"syscall"
 	"time"
@@ -213,6 +214,17 @@ func runCommand(hiveChan *chan *hive_message.HiveMessage, i int, attempt int, co
 	cmd := exec.Command(processSpec.Cmd[0], args...)
 	runningCommands = append(runningCommands, cmd)
 	killingLock.Unlock()
+
+	// Remove the cmd from the array of running commands.
+	defer func() {
+		killingLock.Lock()
+		if !tearingDown {
+			// Only remove from the running commands if not tearing down.
+			// When tearing down, we are actively killing the processes one by one and wee need the cmd array for that.
+			runningCommands = *slice_tools.RemoveFirst(&runningCommands, func(x *exec.Cmd) bool { return x == cmd })
+		}
+		killingLock.Unlock()
+	}()
 
 	// Get command out pipes
 	stdout, err := cmd.StdoutPipe()
