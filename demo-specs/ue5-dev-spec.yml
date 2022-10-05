@@ -7,9 +7,9 @@ spec:
       forwardOsEnv: true
       env:
         - name: REX_PRIVATE_CONNECTIONS
-          value: "1"
+          value: "0"
         - name: REX_PUBLIC_CONNECTIONS
-          value: "1"
+          value: "2"
       # We're not providing REX_AUTH_TOKEN here, that's defined in the OS and we're forwarding OS env vars.
       # - name: REX_AUTH_TOKEN
       #   value: "Basic: xxxxxxxx=="
@@ -22,5 +22,5 @@ spec:
         - "-stdout"
         - "-PORT={unique-in-sequence:7788-8000}"
         - "-networkversionoverride=1666999666"
-      restart: Never
+      restart: Always
       replicas: 1
