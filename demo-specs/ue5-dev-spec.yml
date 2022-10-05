@@ -4,6 +4,15 @@ metadata:
 spec:
   processes:
     - name: "rex-balloon-pop-squads-night"
+      forwardOsEnv: true
+      env:
+        - name: REX_PRIVATE_CONNECTIONS
+          value: "1"
+        - name: REX_PUBLIC_CONNECTIONS
+          value: "1"
+      # We're not providing REX_AUTH_TOKEN here, that's defined in the OS and we're forwarding OS env vars.
+      # - name: REX_AUTH_TOKEN
+      #   value: "Basic: xxxxxxxx=="
       cmd:
         - "C:/Program Files/Epic Games/UE_5.0/Engine/Binaries/Win64/UnrealEditor.exe"
         - "E:/x/games/rex-unreal-plugin/RexOnlineSample.uproject"

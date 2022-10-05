@@ -9,7 +9,11 @@ import (
 
 type ProcessSpec struct {
 	Name string `bson:"name"`
-	Env  []struct {
+	// ForwardOsEnv when set to true, will forward all the OS env vars (`os.Environ()`) to the process.
+	// If instead of running a compiled binary, you're running `go run` e.g: `go run my-main.go`, you need to set this
+	// to true.
+	ForwardOsEnv bool `yaml:"forwardOsEnv" bson:"forwardOsEnv"`
+	Env          []struct {
 		Name      string `bson:"name"`
 		Value     string `bson:"value"`
 		ValueFrom struct {

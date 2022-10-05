@@ -237,8 +237,10 @@ func runCommand(hiveChan *chan *hive_message.HiveMessage, i int, attempt int, co
 			p.PrintLnColor(preSpawnId, colors, i, p.Dim("process spec has no env vars"))
 		}
 
-		// Important: Uncomment next line if you are running a command like `go run ...` instead of a compiled binary, or it won't run
-		//cmd.Env = os.Environ()
+		if processSpec.ForwardOsEnv {
+			cmd.Env = os.Environ()
+			fmt.Println(cmd.Env)
+		}
 
 		for _, envEntry := range processSpec.Env {
 			p.PrintLnColor(preSpawnId, colors, i, p.Dim(fmt.Sprintf("setting env %s=%s", envEntry.Name, envEntry.Value)))
