@@ -54,6 +54,10 @@ Run example spec:
 go run . --file=./demo-specs/test-spec.yml
 ```
 
+```shell
+go run . --file=./demo-specs/ue5-dev-spec.yml
+```
+
 -----
 
 ## Test a go file in a remote machine
