@@ -10,6 +10,8 @@ spec:
           value: "0"
         - name: REX_PUBLIC_CONNECTIONS
           value: "2"
+        - name: REX_SURROGATE_IP
+          value: "127.0.0.1"
       # We're not providing REX_AUTH_TOKEN here, that's defined in the OS and we're forwarding OS env vars.
       # - name: REX_AUTH_TOKEN
       #   value: "Basic: xxxxxxxx=="
