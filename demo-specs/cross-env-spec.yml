@@ -1,0 +1,69 @@
+kind: HiveSpec
+metadata:
+  name: hive-spec-demo
+spec:
+  processes:
+    - name: "rex-balloon-pop-squads-night"
+      env:
+        - name: REX_PRIVATE_CONNECTIONS
+          value: 1
+        - name: REX_PUBLIC_CONNECTIONS
+          value: 1
+      cmd:
+        - "./NotAGameGolang/rex-hive-daemon-not-a-game-golang"
+#        - "go"
+#        - "run"
+#        - "./NotAGameGolang/main.go"
+        - "1"
+#        - "C:/Program Files/Epic Games/UE_5.0/Engine/Binaries/Win64/UnrealEditor.exe"
+#        - "E:/x/games/rex-unreal-plugin/RexOnlineSample.uproject"
+#        - "/Game/RexOnlineSample/Maps/Lobby.umap"
+#        - "-server"
+#        - "-game"
+#        - "-stdout"
+#        - "-PORT={unique-in-sequence:7788-8000}"
+#        - "-networkversionoverride=1666999666"
+      restart: Never
+      replicas: 1
+    - name: "rex-balloon-pop-squads-night"
+      env:
+        - name: REX_PRIVATE_CONNECTIONS
+          value: 2
+        - name: REX_PUBLIC_CONNECTIONS
+          value: 2
+      cmd:
+        - "./NotAGameGolang/rex-hive-daemon-not-a-game-golang"
+#        - "go"
+#        - "run"
+#        - "./NotAGameGolang/main.go"
+        - "1"
+      restart: Never
+      replicas: 1
+    - name: "rex-balloon-pop-squads-night"
+      cmd:
+        - "./NotAGameGolang/rex-hive-daemon-not-a-game-golang"
+#        - "go"
+#        - "run"
+#        - "./NotAGameGolang/main.go"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+        - "1"
+      restart: Always
+      replicas: 1
+# TODO: Implement secrets in daemon
+# TODO: Implement config map in daemon
