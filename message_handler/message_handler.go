@@ -33,9 +33,12 @@ var (
 	didStartup      = false
 	machineMeta     = &machine_meta.MachineMeta{}
 	// Channels helps to block execution while there are still pending messages to store in DB
-	flushChan *chan bool
-	hiveRunId interface{}
+	flushChan        *chan bool
+	hiveRunId        interface{}
+	flushRequestTime time.Time
 )
+
+const maxFlushGraceSeconds = 5
 
 func Run(hiveSpec *hive_spec.HiveSpec) {
 	if didStartup {
@@ -64,6 +67,7 @@ func Run(hiveSpec *hive_spec.HiveSpec) {
 
 func Flush(c *chan bool) {
 	flushChan = c
+	flushRequestTime = time.Now()
 }
 
 func hearBeat() {
@@ -198,7 +202,13 @@ func bulkStoreMessagesInMongo() {
 			*flushChan <- true
 			flushChan = nil
 		} else {
-			fmt.Println(rexprint.Dim("Flush requested: There are pending messages to be stored in DB, will wait to flush..."))
+			if time.Now().Unix() > flushRequestTime.Unix()+maxFlushGraceSeconds {
+				fmt.Println(rexprint.ErrColor("Flush requested: There are pending messages to be stored in DB, but timeout was reached, will exit now"))
+				*flushChan <- true
+				flushChan = nil
+			} else {
+				fmt.Println(rexprint.Dim("Flush requested: There are pending messages to be stored in DB, will wait to flush..."))
+			}
 		}
 	}
 }
