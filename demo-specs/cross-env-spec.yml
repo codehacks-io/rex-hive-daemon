@@ -15,14 +15,6 @@ spec:
 #        - "run"
 #        - "./NotAGameGolang/main.go"
         - "1"
-#        - "C:/Program Files/Epic Games/UE_5.0/Engine/Binaries/Win64/UnrealEditor.exe"
-#        - "E:/x/games/rex-unreal-plugin/RexOnlineSample.uproject"
-#        - "/Game/RexOnlineSample/Maps/Lobby.umap"
-#        - "-server"
-#        - "-game"
-#        - "-stdout"
-#        - "-PORT={unique-in-sequence:7788-8000}"
-#        - "-networkversionoverride=1666999666"
       restart: Never
       replicas: 1
     - name: "rex-balloon-pop-squads-night"
