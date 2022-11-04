@@ -70,15 +70,20 @@ func main() {
 		panic(err)
 	}
 
-	go message_handler.Run(hiveSpec)
+	if os.Getenv("USE_MONGO") == "1" {
+		go message_handler.Run(hiveSpec)
+	}
+
 	runHiveSpec(hiveSpec)
 
-	// Wait for messages to be stored in DB (flushing)
-	fmt.Println(p.Dim("HiveRun finished, waiting to flush"))
-	flushChan := make(chan bool)
-	message_handler.Flush(&flushChan)
-	<-flushChan
-	close(flushChan)
+	if os.Getenv("USE_MONGO") == "1" {
+		// Wait for messages to be stored in DB (flushing)
+		fmt.Println(p.Dim("HiveRun finished, waiting to flush"))
+		flushChan := make(chan bool)
+		message_handler.Flush(&flushChan)
+		<-flushChan
+		close(flushChan)
+	}
 }
 
 func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
@@ -125,7 +130,9 @@ func runHiveSpec(hiveSpec *hive_spec.HiveSpec) {
 	}()
 
 	for c := range hiveChan {
-		message_handler.OnHiveMessage(c)
+		if os.Getenv("USE_MONGO") == "1" {
+			message_handler.OnHiveMessage(c)
+		}
 	}
 }
 
